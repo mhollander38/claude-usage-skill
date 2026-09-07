@@ -44,6 +44,44 @@ Ask Claude Code about usage limits, or invoke it directly:
   week lines, discarding the rest of the (unrelated) usage breakdown.
 - `install.sh` — symlinks this repo into `~/.claude/skills/check-usage`.
 
+## Suggested usage: running autonomously across usage limits
+
+This skill is most useful as a scheduling check for long, multi-step, unattended work —
+letting Claude keep going for as long as possible instead of stopping to ask permission
+every time capacity gets tight. A suggested pattern:
+
+1. **Before starting any non-trivial task** (multi-step, involves deploys/migrations, or
+   can't be abandoned partway without leaving a mess), invoke this skill and check
+   remaining capacity.
+2. **At every safe step boundary**, check again. If session usage is climbing toward the
+   limit (say, above ~90%), pause there rather than starting a step that might get cut off
+   mid-way.
+3. **Commit after every step**, so an interrupted run can only ever stop *between* steps,
+   never mid-edit.
+4. **When capacity runs out, schedule a resume** for a few minutes *after* the reset time
+   shown by this skill (avoid scheduling exactly on the reset mark). Pass along everything
+   the resumed run needs to pick up cleanly: the plan, the branch, and the step to start
+   from. Claude Code's own scheduling tools (e.g. a cron-style wake-up) work well for this;
+   an OS-level `cron`/`launchd`/`at` job is a fallback if the session itself won't stay
+   resident.
+5. **Report the pause and the scheduled resume time**, then stop cleanly rather than
+   waiting idle — repeat across as many reset windows as the work takes.
+6. **Only stop for a genuine human gate** — something that truly needs a person: dashboard
+   actions, secrets to create, deploys/migrations to actually run, device builds, an
+   irreversible or outward-facing action, or a decision the plan doesn't already settle.
+
+Running an agent this unattended goes further with a more permissive permission mode
+(auto-accepting routine tool calls) so it isn't blocked waiting on approvals it can't
+receive while unsupervised — weigh that against the blast radius of what the task can do
+before turning it on.
+
+**Caveat:** in-session scheduling (like Claude Code's cron-style wake-ups) is typically
+session-only — in memory, and gone if the session exits. A run that needs to span a reset
+window needs that terminal/session left open and idle throughout, or the resume needs to be
+handed to something more durable (a real OS cron job, CI, etc.). A silently-dead scheduled
+job looks identical to one that just hasn't fired yet, so say so plainly whenever you set
+one up.
+
 ## Requirements
 
 - Claude Code CLI installed and authenticated (`claude` on your `PATH`).
