@@ -16,6 +16,21 @@ Current session: 77% used · resets Sep 7 at 9:29pm (Europe/London)
 Current week (all models): 50% used · resets Sep 13 at 4:59am (Europe/London)
 ```
 
+It also flags a scenario that's easy to miss: a healthy session percentage doesn't mean
+capacity is actually fine if weekly is exhausted. If weekly is at/near 100% while session
+still shows room, the script adds a warning:
+
+```
+WARNING: weekly quota is exhausted (100%) but the session limit still shows room (0%).
+A healthy session percentage does not mean capacity is fine here — if requests are still succeeding,
+that overflow is either being billed as purchased usage credits (extra usage), or you're in a brief
+grace window before a hard stop. Run '/usage-credits' in an interactive session to confirm which.
+```
+
+This matters because a naive check that only watches session usage (e.g. "pause above ~90%
+session used") will happily keep running once weekly is spent, silently burning purchased
+usage credits (real money) — or riding a grace window that ends without warning.
+
 ## Install
 
 ```bash
@@ -55,7 +70,9 @@ every time capacity gets tight. A suggested pattern:
    remaining capacity.
 2. **At every safe step boundary**, check again. If session usage is climbing toward the
    limit (say, above ~90%), pause there rather than starting a step that might get cut off
-   mid-way.
+   mid-way. Check weekly too — a fine session percentage doesn't mean capacity is fine if
+   weekly is exhausted (see the `WARNING` case above); don't let that pass unmentioned even
+   if you decide to keep going.
 3. **Commit after every step**, so an interrupted run can only ever stop *between* steps,
    never mid-edit.
 4. **When capacity runs out, schedule a resume** for a few minutes *after* the reset time
@@ -97,8 +114,11 @@ the interactive command, just wrapped in a JSON envelope. When usage credits are
 Claude Code shows extra rows in `/usage` (credit balance, spend, or an "off" hint) alongside
 the session/week percentages, so this skill's script opportunistically greps for
 credit/extra-usage/overage keywords too. Whether those rows appear in the headless `-p`
-render depends on account/plan eligibility — this repo's own test account doesn't have
-credits enabled, so that path is unverified end-to-end; treat it as best-effort.
+render depends on account/plan eligibility, so treat that part as best-effort — the plain-text
+`/usage` output on this repo's own test account never printed a credit line either way, even
+while its weekly quota sat at 100% and requests kept succeeding (see the `WARNING` case above),
+which is itself indirect evidence that *something* — credits or a grace window — was covering
+the overflow without the CLI saying so explicitly.
 
 ## Requirements
 

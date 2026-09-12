@@ -22,6 +22,17 @@ Current week (all models): 50% used · resets Sep 13 at 4:59am (Europe/London)
 
 Report both percentages and their reset times back to the user in a friendly, concise way. Do not fetch or relay the rest of the `/usage` breakdown (subagent/skill/plugin stats) — only the session and week lines are relevant here.
 
+### Weekly exhausted but session shows room — always flag this
+
+A healthy session percentage does not mean capacity is fine on its own. If the script prints
+a `WARNING:` line, that means weekly is at/near 100% while the session limit still shows
+room. **Do not fold this into a routine "here's your usage" report — call it out explicitly
+and first**, before the plain percentages: say clearly that weekly quota is exhausted, and
+that continuing to run right now either bills purchased usage credits (real money, if enabled)
+or is running on borrowed time before a hard stop. Point them at `/usage-credits`
+(interactive-only) to confirm which. This applies even when following the Usage Capacity
+Policy's "keep going, don't stop to ask" default — keep going, but never silently.
+
 ### Extra / purchased usage ("usage credits")
 
 Anthropic's pay-as-you-go feature for continuing past the plan's included quota is called
