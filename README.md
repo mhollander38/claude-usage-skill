@@ -82,6 +82,24 @@ handed to something more durable (a real OS cron job, CI, etc.). A silently-dead
 job looks identical to one that just hasn't fired yet, so say so plainly whenever you set
 one up.
 
+## Extra / purchased usage ("usage credits")
+
+Claude Code has a pay-as-you-go feature for continuing past your plan's included quota,
+currently called **usage credits** in the CLI (you may also see it referred to as "overage"
+or "extra usage" in older or internal messages — same feature). It's off by default; you
+turn it on, buy credits, and set a monthly spend limit or auto-reload via `/usage-credits`,
+which is interactive-only — it opens `claude.ai/settings/usage` in a browser. On Team/
+Enterprise plans an org admin manages it instead, at `claude.ai/admin-settings/usage`.
+
+As of Claude Code 2.1.269, there's no dedicated flag or JSON field exposing usage-credit
+status — `claude -p "/usage" --output-format json` returns the same plain-text block as
+the interactive command, just wrapped in a JSON envelope. When usage credits are active,
+Claude Code shows extra rows in `/usage` (credit balance, spend, or an "off" hint) alongside
+the session/week percentages, so this skill's script opportunistically greps for
+credit/extra-usage/overage keywords too. Whether those rows appear in the headless `-p`
+render depends on account/plan eligibility — this repo's own test account doesn't have
+credits enabled, so that path is unverified end-to-end; treat it as best-effort.
+
 ## Requirements
 
 - Claude Code CLI installed and authenticated (`claude` on your `PATH`).

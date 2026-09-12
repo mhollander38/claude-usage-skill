@@ -2,7 +2,7 @@
 set -euo pipefail
 
 output="$(claude -p "/usage" 2>&1)"
-matched="$(echo "$output" | grep -E '^Current (session|week)' || true)"
+matched="$(echo "$output" | grep -iE '^Current (session|week)|credit|extra usage|overage' || true)"
 
 if [ -n "$matched" ]; then
   echo "$matched"
