@@ -39,11 +39,12 @@ The script may add one of these blocks after the figures. Relay them, do not sof
 
 ## When the script cannot get numbers
 
-Lines starting with `check-usage:` are the script explaining a failure. Relay them verbatim and do
-not guess, estimate, or infer usage from token counts or context size. Then tell the user how to get
+A block starting with a `check-usage:` line is the script explaining a failure. Relay the whole block
+verbatim and do not guess, estimate, or infer usage from token counts or context size. Then tell the user how to get
 the figures: run `/usage` in an interactive Claude Code session. If the script says the output was
 the per-session cost summary, the account in this environment is most likely on API-key billing or
-not signed in to a subscription, so there is no session/weekly quota to report.
+not signed in to a subscription, so there is no session/weekly quota to report. If the block says it is reading canned output (not
+live), say so: the figures are test data, not the account's usage.
 
 ## Recommended decision rule for unattended, multi-step work
 
@@ -76,11 +77,3 @@ also have $X of purchased usage credits remaining; work past the weekly limit is
 To enable, buy, or check credits, the user runs `/usage-credits` in an **interactive** session (it
 opens `claude.ai/settings/usage` in a browser). On Team/Enterprise plans an org admin manages it at
 `claude.ai/admin-settings/usage`.
-
-## Testing the script without a live account
-
-- `CHECK_USAGE_INPUT_FILE=<path>` makes the script read canned `/usage` text from a file instead of
-  calling the CLI. Fixtures live in `tests/fixtures/`.
-- `CHECK_USAGE_CLAUDE_BIN=<path>` points the script at a different `claude` binary (used by tests to
-  simulate failures).
-- `bash tests/test-check-usage.sh` runs the test suite.

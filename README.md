@@ -45,7 +45,7 @@ cd claude-usage-skill
 ./install.sh
 ```
 
-This symlinks the repo into `~/.claude/skills/check-usage`, so pulling updates in the repo
+This symlinks `skills/check-usage` into `~/.claude/skills/check-usage`, so pulling updates in the repo
 updates the installed skill automatically. Start a new Claude Code session afterwards —
 skills are loaded at session start.
 
@@ -90,6 +90,8 @@ for trying the skill's behaviour by hand:
 
 - `CHECK_USAGE_INPUT_FILE=<path>` reads canned `/usage` text from a file (see `tests/fixtures/`).
 - `CHECK_USAGE_CLAUDE_BIN=<path>` calls a different `claude` binary.
+
+When `CHECK_USAGE_INPUT_FILE` is set the script prints a `check-usage: reading canned /usage output … (not live)` line first, so canned figures are never mistaken for live ones.
 
 ```bash
 CHECK_USAGE_INPUT_FILE=tests/fixtures/weekly-exhausted.txt bash skills/check-usage/scripts/check-usage.sh

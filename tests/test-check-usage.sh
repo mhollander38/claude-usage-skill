@@ -1,5 +1,5 @@
 #!/bin/bash
-# Plain-bash tests for scripts/check-usage.sh. Run: bash tests/test-check-usage.sh
+# Plain-bash tests for skills/check-usage/scripts/check-usage.sh. Run: bash tests/test-check-usage.sh
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,9 +38,14 @@ assert_eq() { # NAME EXPECTED ACTUAL
 }
 
 run_with_file() { # FIXTURE_PATH -> sets out, rc
-  out="$(CHECK_USAGE_INPUT_FILE="$1" bash "$SCRIPT" 2>&1)"
+  out="$(CHECK_USAGE_INPUT_FILE="$1" CHECK_USAGE_CLAUDE_BIN="$TMP/sentinel" bash "$SCRIPT" 2>&1)"
   rc=$?
 }
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+printf '#!/bin/bash\necho SENTINEL-CALLED; exit 99\n' > "$TMP/sentinel"
+chmod +x "$TMP/sentinel"
 
 # --- A4: canned input ---------------------------------------------------------
 
@@ -50,6 +55,7 @@ assert_contains "normal: session line relayed" "$out" "Current session: 23% used
 assert_contains "normal: week line relayed" "$out" "Current week (all models): 49% used"
 assert_contains "normal: per-model line relayed" "$out" "Current week (Fable): 2% used"
 assert_not_contains "normal: no WARNING" "$out" "WARNING"
+assert_contains "normal: canned marker" "$out" "check-usage: reading canned /usage output"
 
 run_with_file "$FIX/weekly-exhausted.txt"
 assert_eq       "exhausted: exit 0" 0 "$rc"
@@ -60,15 +66,18 @@ run_with_file "$FIX/week-permodel-only.txt"
 assert_eq       "permodel-only: exit 0" 0 "$rc"
 assert_contains "permodel-only: session relayed" "$out" "Current session: 12% used"
 assert_not_contains "permodel-only: no WARNING without all-models line" "$out" "WARNING"
+assert_contains "permodel-only: per-model line relayed" "$out" "Current week (Fable): 100% used"
+assert_not_contains "permodel-only: no NOTICE without all-models line" "$out" "NOTICE"
 
 run_with_file "$FIX/does-not-exist.txt"
 assert_eq       "unreadable input file: exit 2" 2 "$rc"
 assert_contains "unreadable input file: explains" "$out" "check-usage: CHECK_USAGE_INPUT_FILE is set but"
+assert_not_contains "unreadable input file: CLI not called" "$out" "SENTINEL-CALLED"
+
+run_with_file "$TMP"
+assert_eq       "directory input file: exit 2" 2 "$rc"
 
 # --- A1: loud failures --------------------------------------------------------
-
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
 
 run_with_fake_claude() { # BODY -> sets out, rc. BODY is the fake claude's script body.
   printf '#!/bin/bash\n%s\n' "$1" > "$TMP/claude"
@@ -93,12 +102,20 @@ assert_contains "cli empty: explains" "$out" "check-usage: 'claude -p /usage' re
 run_with_fake_claude 'echo "Current session: 5% used"; echo "boom" >&2; exit 3'
 assert_eq       "cli lines then nonzero: treated as failure" 1 "$rc"
 assert_contains "cli lines then nonzero: reports exit code" "$out" "(exit 3)"
+assert_contains "cli lines then nonzero: shows partial output" "$out" "Current session: 5% used"
+assert_contains "cli lines then nonzero: shows stderr" "$out" "boom"
 
 run_with_file "$FIX/cost-summary.txt"
 assert_eq       "cost summary: exit 0" 0 "$rc"
 assert_contains "cost summary: says no structured lines" "$out" "check-usage: no session/week lines found"
 assert_contains "cost summary: hints not signed in" "$out" "per-session cost summary"
 assert_contains "cost summary: echoes raw output" "$out" "Total cost:"
+
+run_with_file "$FIX/credits-only.txt"
+assert_eq       "credits only: exit 0" 0 "$rc"
+assert_contains "credits only: explains no structured lines" "$out" "check-usage: no session/week lines found"
+assert_contains "credits only: cost summary hint" "$out" "per-session cost summary"
+assert_contains "credits only: raw echoed" "$out" "Usage credits are off"
 
 # --- B3: NOTICE near exhaustion ----------------------------------------------
 
@@ -110,6 +127,8 @@ assert_not_contains "near: no WARNING below 100" "$out" "WARNING"
 
 run_with_file "$FIX/both-100.txt"
 assert_eq       "both 100: exit 0" 0 "$rc"
+assert_contains "both 100: session line still printed" "$out" "Current session: 100% used"
+assert_contains "both 100: week line still printed" "$out" "Current week (all models): 100% used"
 assert_not_contains "both 100: no WARNING when session has no room" "$out" "WARNING"
 assert_not_contains "both 100: no NOTICE at 100" "$out" "NOTICE"
 

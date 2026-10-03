@@ -193,3 +193,11 @@ Research needed (use current docs, this changes often):
 
 Output: a short write-up in this repo plus any resulting changes to the script's parsing and
 SKILL.md's reporting rules, with fixtures for each plan's `/usage` shape.
+
+---
+
+## F. Deferred from the final review (2026-10-03)
+
+- A `/usage` output with a weekly line at 100% but no session line fires neither WARNING nor NOTICE (script keys the WARNING on both figures). Add a branch for week >= 100 with no session figure.
+- ANSI escape codes around a `Current ...` line would drop that line silently. Strip escapes before matching if this is ever observed in `-p` output.
+- README "Use" section only covers the symlink install (`/check-usage`); as a plugin the skill is `claude-usage-skill:check-usage`.

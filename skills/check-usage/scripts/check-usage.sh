@@ -17,6 +17,7 @@ if [ -n "${CHECK_USAGE_INPUT_FILE:-}" ]; then
     exit 2
   fi
   output="$(cat "$CHECK_USAGE_INPUT_FILE")"
+  echo "check-usage: reading canned /usage output from '$CHECK_USAGE_INPUT_FILE' (not live)."
   status=0
 else
   if ! command -v "$claude_bin" >/dev/null 2>&1; then
@@ -28,7 +29,7 @@ else
 fi
 
 if [ "$status" -ne 0 ]; then
-  echo "check-usage: 'claude -p /usage' failed (exit $status). Usage figures are unavailable. Output was:"
+  echo "check-usage: 'claude -p /usage' failed (exit $status). Usage figures are unavailable. Output was (first 20 lines):"
   echo "$output" | head -20
   exit 1
 fi
@@ -41,7 +42,9 @@ fi
 
 matched="$(echo "$output" | grep -iE '^Current (session|week)|credit|extra usage|overage' || true)"
 
-if [ -z "$matched" ]; then
+structured="$(echo "$output" | grep -iE '^Current (session|week)' || true)"
+
+if [ -z "$structured" ]; then
   echo "check-usage: no session/week lines found in /usage output, so structured percentages are not available."
   if echo "$output" | grep -qE '^Total cost:'; then
     echo "check-usage: this is the per-session cost summary, which /usage prints when the CLI is not signed in to a"
