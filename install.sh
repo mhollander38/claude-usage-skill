@@ -1,7 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$REPO/skills/check-usage"
 DEST="$HOME/.claude/skills/check-usage"
 
 mkdir -p "$HOME/.claude/skills"

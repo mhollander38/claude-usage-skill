@@ -3,7 +3,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT="${CHECK_USAGE_SCRIPT:-$ROOT/scripts/check-usage.sh}"
+SCRIPT="${CHECK_USAGE_SCRIPT:-$ROOT/skills/check-usage/scripts/check-usage.sh}"
 FIX="$ROOT/tests/fixtures"
 pass=0
 fail=0

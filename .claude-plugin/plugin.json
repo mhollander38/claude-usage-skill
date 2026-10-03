@@ -1,0 +1,9 @@
+{
+  "name": "claude-usage-skill",
+  "description": "Reports live Claude Code session and weekly usage against subscription limits, with reset times, so long-running sessions can pace themselves.",
+  "version": "0.2.0",
+  "author": {
+    "name": "mhollander38",
+    "url": "https://github.com/mhollander38/claude-usage-skill"
+  }
+}

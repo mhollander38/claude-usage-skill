@@ -59,11 +59,13 @@ Ask Claude Code about usage limits, or invoke it directly:
 
 ## How it works
 
-- `SKILL.md` — instructions telling Claude to run the bundled script and report the two
-  percentages back conversationally.
-- `scripts/check-usage.sh` — runs `claude -p "/usage"` and extracts just the session and
-  week lines, discarding the rest of the (unrelated) usage breakdown.
-- `install.sh` — symlinks this repo into `~/.claude/skills/check-usage`.
+- `skills/check-usage/SKILL.md` — instructions telling Claude to run the bundled script and how to
+  report and interpret what it prints.
+- `skills/check-usage/scripts/check-usage.sh` — runs `claude -p "/usage"`, extracts the session and
+  week lines, and adds a `NOTICE`/`WARNING` block when the week is nearly or fully exhausted.
+- `install.sh` — symlinks `skills/check-usage` into `~/.claude/skills/check-usage`.
+- `.claude-plugin/plugin.json` — plugin manifest, so the repo can also be installed as a plugin or
+  run under `claude plugin eval`.
 
 ## When it cannot get numbers
 
@@ -90,7 +92,7 @@ for trying the skill's behaviour by hand:
 - `CHECK_USAGE_CLAUDE_BIN=<path>` calls a different `claude` binary.
 
 ```bash
-CHECK_USAGE_INPUT_FILE=tests/fixtures/weekly-exhausted.txt bash scripts/check-usage.sh
+CHECK_USAGE_INPUT_FILE=tests/fixtures/weekly-exhausted.txt bash skills/check-usage/scripts/check-usage.sh
 ```
 
 ## Suggested usage: running autonomously across usage limits
