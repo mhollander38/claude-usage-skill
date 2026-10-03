@@ -138,3 +138,27 @@ Not observable here because the script returns nothing in the sandbox (C1).
   ```
   claude plugin eval . --ablation with-without --judge-model sonnet --allow-tools "Bash(bash:*)"
   ```
+
+---
+
+## E. Follow-on research (after the fixes above are done)
+
+### E1. Plan tiers, the Fable allowance, and what else `/usage` can tell us
+**Raised 2026-10-03.** The skill was built on a Pro plan, where Fable usage was pay-per-use only. On
+the Max 5x plan there is a separate Fable allowance, and the script already shows a third line
+(`Current week (Fable): N%`). Observed behaviour: the 5-hour session limit still gets hit even while
+the Fable allowance shows room. It is not yet clear how the per-model allowance interacts with the
+session and weekly limits.
+
+Research needed (use current docs, this changes often):
+- How the session (5-hour), weekly (all models), and per-model (Fable) limits interact on each plan
+  that includes Claude Code: Pro, Max 5x, Max 20x, Team, Enterprise. Which one binds first and when.
+- Whether `/usage` exposes the plan tier, and whether any other line (per-model allowance, credits
+  balance, grace status) appears on tiers other than the one tested here.
+- What the skill should display or use from that: e.g. report the Fable line as a headline figure
+  when it is the binding limit, surface the plan tier, or adjust the decision rule per plan.
+- Whether anything beyond `/usage` (API, `/status`, config files) gives the tier or allowance
+  without undocumented access.
+
+Output: a short write-up in this repo plus any resulting changes to the script's parsing and
+SKILL.md's reporting rules, with fixtures for each plan's `/usage` shape.
