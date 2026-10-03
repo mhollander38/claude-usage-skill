@@ -11,6 +11,8 @@ transcripts under `~/.claude/projects`, and manual reproduction of the script ou
 ## A. Plugin fixes (script and SKILL.md)
 
 ### A1. The script fails silently when the nested `claude -p "/usage"` call fails
+
+**Status (2026-10-03):** resolved in `cae718e` — the script now prints a `check-usage:` line and exits non-zero when `/usage` cannot be read.
 **Severity: high.** In every live eval run the script produced no output at all: no usage lines, no
 error, exit 0 as far as the caller could tell. Cause: `set -euo pipefail` plus
 `output="$(claude -p "/usage" 2>&1)"`. If the nested `claude` exits non-zero the script dies at that
@@ -28,11 +30,15 @@ such as `check-usage: could not reach /usage (exit N): <stderr>` so the caller c
 authenticated / not reachable" from "API-key billing" from "format changed".
 
 ### A2. The third output line (`Current week (Fable)`) is undocumented
+
+**Status (2026-10-03):** resolved in `fed5e62` — SKILL.md and README document the third (per-model) line and tell the agent how to treat it.
 **Severity: low.** The live script now prints three lines: session, week (all models), week (Fable).
 README and SKILL.md both show only two. The WARNING logic correctly keys on `(all models)` only, but
 SKILL.md should tell the agent whether to relay the per-model line or ignore it.
 
 ### A3. SKILL.md guidance only engages when the script is run
+
+**Status (2026-10-03):** resolved in `fed5e62` — the description now triggers on pasted `/usage` output and SKILL.md carries the interpretation rules; pilot case 03 moved from Δ 0 to Δ +0.33.
 **Severity: medium.** The WARNING-first rule, the credits/grace-window explanation, and the
 `/usage-credits` pointer live in SKILL.md, and SKILL.md is only loaded when the skill fires. When a
 user pastes `/usage` output and asks "continue or pause?", the skill does not fire (observed in all
@@ -46,6 +52,8 @@ style prompts; or move the interpretation rules into a place that applies regard
 policy). Until then, eval case 03 will stay at zero delta.
 
 ### A4. The WARNING branch cannot be exercised on demand
+
+**Status (2026-10-03):** resolved in `c4eff74` — `CHECK_USAGE_INPUT_FILE` reads canned `/usage` output, with a bash test harness covering the WARNING branch.
 **Severity: medium (testability).** The script reads the live account, so whether the WARNING fires
 depends on the real weekly percentage. There is no way to test it deterministically. A plugin-side
 hook such as `CHECK_USAGE_INPUT_FILE=<path>` (read canned `/usage` output instead of calling
@@ -57,6 +65,8 @@ end to end instead of via pasted text.
 ## B. Triggering and real-world behaviour (from transcripts)
 
 ### B1. The skill under-fires relative to how the user wants it used
+
+**Status (2026-10-03):** resolved in `fed5e62` — the description now names task kickoff, step boundaries and resume-after-reset as triggers.
 Across all transcripts:
 
 | route | count |
@@ -72,6 +82,8 @@ resume-after-reset, which is where the user actually wants it. Consider adding t
 description.
 
 ### B2. Observed failures in real sessions (before and after the WARNING was added)
+
+**Status (2026-10-03):** partially addressed in `fed5e62` — SKILL.md now carries a recommended decision rule; CLAUDE.md policy still overrides.
 Three patterns, each seen at least once in the transcript review (details paraphrased):
 - Weekly at 100% with the session near 0%: Claude treated the session headroom as sufficient and
   carried on, flagging the weekly ceiling only as a future risk. This is the failure the WARNING now
@@ -84,6 +96,8 @@ a recommended decision rule or leave that to policy; today the skill reports num
 decides, and B2 shows the policy step being skipped.
 
 ### B3. Direct Bash runs bypass SKILL.md
+
+**Status (2026-10-03):** resolved in `cae718e` — the script itself now prints a NOTICE at 95-99% alongside the WARNING, so direct Bash runs carry the rule.
 Because the script is usually run directly (B1), the guidance in SKILL.md is often not in context
 when the numbers come back. That compounds A3. Putting the critical interpretation rule (weekly
 exhausted ⇒ flag credits) into the script's own output text, as the WARNING already does, is the
@@ -98,12 +112,14 @@ The eval runner gives the agent an isolated config dir with no credentials. The 
 call therefore never returns usage lines, so the live path is untestable here. Cases 01 and 02
 measure "attempts the check and reports honestly" rather than "reports correct numbers". There is no
 runner flag to pass auth through, and copying credentials into the sandbox is not an acceptable
-workaround. A4 is the proper fix.
+workaround. A4 is the proper fix. A4 is now implemented; a future eval case can use CHECK_USAGE_INPUT_FILE with a fixture to cover the WARNING branch end to end.
 
 ### C2. Only two cases carry measurable delta today
 Pilot 3 (1 run, both arms): 01 Δ +0.67, 02 Δ +0.40, all others Δ 0. Cases 03 and 04 pass or fail
 identically in both arms because the skill does not fire on pasted numbers (A3). The negatives are
 expected to be Δ 0.
+
+Post-fix pilot (2026-10-03, 1 run, both arms): 01 Δ +0.67, 02 Δ +0.40, 03 Δ +0.33, 04 Δ +0.50, 05 Δ 0.00, 06 Δ 0.00 (mean Δ +0.32, $3.11). The skill fired in the with-arm on 01-04 and stayed quiet on both negatives.
 
 ### C3. Judge reasoning is not stored
 `aggregate-result.json` records judge votes only (e.g. `FAIL FAIL FAIL`), not the rationale. To
@@ -130,9 +146,11 @@ Not observable here because the script returns nothing in the sandbox (C1).
 
 - **`evals/results/` is untracked.** Add it to `.gitignore` before committing the suite, or decide
   to keep pilot reports in the repo.
+  **Status (2026-10-03):** resolved — `evals/results/` is gitignored.
 - **Repo layout is not a standard plugin layout.** No `.claude-plugin/plugin.json`, no `skills/`
   dir; SKILL.md sits at the root and is installed by symlink. The eval runner loaded it anyway
   (`suite.plugins` listed it with no problem code), so this is cosmetic for now.
+  **Status (2026-10-03):** resolved in `67bb5b3` — standard plugin layout with `.claude-plugin/plugin.json` and `skills/check-usage/`; the post-fix pilot loaded `claude-usage-skill` 0.2.0 with no problem key.
 - **Full-run command and cost** (from `evals/` setup): about $10 per full run at `runs: 3`.
 
   ```
