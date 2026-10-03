@@ -1,6 +1,6 @@
 ---
 name: check-usage
-description: Check Claude Code's current 5-hour rolling session usage and weekly usage percentages against your subscription limits. Use when the user asks about usage limits, how much of their session/quota they've used, whether they're close to being rate limited, or when to /compact to save context.
+description: Check Claude Code's live 5-hour session and weekly usage percentages against the subscription limits, with reset times. Use when the user asks about usage, quota, limits, or whether they are close to being rate limited; before starting any non-trivial or multi-step task; at step boundaries during planned work; when resuming after a usage limit reset ("limit increased, continue"); and when the user pastes /usage output and asks whether to continue or pause.
 ---
 
 # Check Usage
@@ -13,41 +13,74 @@ bash <this skill's directory>/scripts/check-usage.sh
 
 (Use the base directory shown when this skill was invoked to build the path.)
 
-The script prints lines like:
+## What the script prints
+
+Normal output is two or three lines:
 
 ```
-Current session: 77% used · resets Sep 7 at 9:29pm (Europe/London)
-Current week (all models): 50% used · resets Sep 13 at 4:59am (Europe/London)
+Current session: 23% used · resets Oct 3 at 7:19pm (Europe/London)
+Current week (all models): 49% used · resets Oct 4 at 5am (Europe/London)
+Current week (Fable): 2% used · resets Oct 4 at 5am (Europe/London)
 ```
 
-Report both percentages and their reset times back to the user in a friendly, concise way. Do not fetch or relay the rest of the `/usage` breakdown (subagent/skill/plugin stats) — only the session and week lines are relevant here.
+Report the session line and the **(all models)** week line as the two headline figures, each with
+its reset time, in one or two friendly sentences. A per-model week line (e.g. `(Fable)`) may also
+appear; it is informational. Mention it only briefly, or when it is the binding limit. Do not fetch
+or relay the rest of the `/usage` breakdown (subagent/skill/plugin stats).
 
-### Weekly exhausted but session shows room — always flag this
+The script may add one of these blocks after the figures. Relay them, do not soften them:
 
-A healthy session percentage does not mean capacity is fine on its own. If the script prints
-a `WARNING:` line, that means weekly is at/near 100% while the session limit still shows
-room. **Do not fold this into a routine "here's your usage" report — call it out explicitly
-and first**, before the plain percentages: say clearly that weekly quota is exhausted, and
-that continuing to run right now either bills purchased usage credits (real money, if enabled)
-or is running on borrowed time before a hard stop. Point them at `/usage-credits`
-(interactive-only) to confirm which. This applies even when following the Usage Capacity
-Policy's "keep going, don't stop to ask" default — keep going, but never silently.
+- **`WARNING:` weekly exhausted, session shows room.** Lead with this, before the plain percentages.
+  Say clearly that weekly quota is exhausted and that continuing right now either bills purchased
+  usage credits (real money, if enabled) or is running on borrowed time before a hard stop. Point to
+  `/usage-credits` (interactive-only) to confirm which. This applies even when a policy says "keep
+  going, don't stop to ask": keep going, but never silently.
+- **`NOTICE:` weekly at 95–99%.** Say so before deciding anything, and say what happens at 100%.
 
-### Extra / purchased usage ("usage credits")
+## When the script cannot get numbers
 
-Anthropic's pay-as-you-go feature for continuing past the plan's included quota is called
-**usage credits** in the current CLI (older internal naming: "overage"/"extra usage" — you may
-still see those words in messages). It's off by default and is enabled per-account or by an
-org admin, so most runs of this script won't see anything about it. If the script's output
-*does* include a line mentioning credits/extra usage/overage — e.g. a credit balance, spend
-amount, or "usage credits are off" — report that alongside the session/week percentages,
-in plain terms (e.g. "you also have $X of purchased usage credits available/spent"). There is
-no separate flag or JSON field for this in Claude Code 2.1.269 — it only ever surfaces as
-plain text inside `/usage`'s output, so this script's regex is the only hook into it.
+Lines starting with `check-usage:` are the script explaining a failure. Relay them verbatim and do
+not guess, estimate, or infer usage from token counts or context size. Then tell the user how to get
+the figures: run `/usage` in an interactive Claude Code session. If the script says the output was
+the per-session cost summary, the account in this environment is most likely on API-key billing or
+not signed in to a subscription, so there is no session/weekly quota to report.
 
-If the user asks to enable, buy, or check their usage-credit balance/settings, tell them to
-run `/usage-credits` in an **interactive** Claude Code session — it opens
-`claude.ai/settings/usage` in a browser and can't be done headlessly. On a Team/Enterprise
-plan, an org admin manages it instead, at `claude.ai/admin-settings/usage`.
+## Recommended decision rule for unattended, multi-step work
 
-If the script's output doesn't match the expected format (e.g. the account is on API-key billing rather than a subscription), just relay whatever it printed and note that structured percentages aren't available.
+A project's own policy (e.g. CLAUDE.md) overrides this. In its absence:
+
+- **Session ≥ 90%:** pause at the next step boundary rather than starting a step that may be cut
+  off. Schedule a resume a few minutes after the session reset time, not exactly on it.
+- **Weekly ≥ 100% (WARNING):** flag it first, as above. Continuing is the user's call, never silent.
+- **Weekly 95–99% (NOTICE):** say so, and prefer to finish at a clean checkpoint.
+- **Otherwise:** report the numbers in one line and carry on.
+
+Check again at every step boundary, not just at the start. A healthy number at the start of a long
+task says nothing about the end of it.
+
+## Interpreting numbers the user already has
+
+If the user pastes `/usage` output and asks whether to continue, apply the same rules to the pasted
+figures. Do not re-run the script unless they ask or the pasted output is ambiguous. In particular,
+weekly at 100% with session room is the WARNING case even when no WARNING text was pasted: say that
+requests may still be succeeding on purchased credits, and point to `/usage-credits`.
+
+## Extra / purchased usage ("usage credits")
+
+Anthropic's pay-as-you-go feature for continuing past the plan's included quota is called **usage
+credits** in the current CLI (older naming: "overage" / "extra usage"). It is off by default. If the
+script's output includes a line mentioning credits, extra usage, or overage (a balance, a spend
+amount, or "usage credits are off"), report it alongside the percentages in plain terms, e.g. "you
+also have $X of purchased usage credits remaining; work past the weekly limit is drawing on that."
+
+To enable, buy, or check credits, the user runs `/usage-credits` in an **interactive** session (it
+opens `claude.ai/settings/usage` in a browser). On Team/Enterprise plans an org admin manages it at
+`claude.ai/admin-settings/usage`.
+
+## Testing the script without a live account
+
+- `CHECK_USAGE_INPUT_FILE=<path>` makes the script read canned `/usage` text from a file instead of
+  calling the CLI. Fixtures live in `tests/fixtures/`.
+- `CHECK_USAGE_CLAUDE_BIN=<path>` points the script at a different `claude` binary (used by tests to
+  simulate failures).
+- `bash tests/test-check-usage.sh` runs the test suite.

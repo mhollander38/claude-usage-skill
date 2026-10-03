@@ -14,11 +14,17 @@ interactive `/usage` command shows you.
 ```
 Current session: 77% used · resets Sep 7 at 9:29pm (Europe/London)
 Current week (all models): 50% used · resets Sep 13 at 4:59am (Europe/London)
+Current week (Fable): 4% used · resets Sep 13 at 4:59am (Europe/London)
 ```
 
-It also flags a scenario that's easy to miss: a healthy session percentage doesn't mean
-capacity is actually fine if weekly is exhausted. If weekly is at/near 100% while session
-still shows room, the script adds a warning:
+The `(all models)` line is the weekly figure that matters. A per-model line (here `Fable`) may also
+appear; it is informational.
+
+Two situations get an extra block so they are not missed, even when the script is run directly from
+Bash without the skill's instructions in context:
+
+- **Weekly at 95–99%** adds a `NOTICE:` saying the week is nearly gone and what happens at 100%.
+- **Weekly at 100% while session still shows room** adds a `WARNING:`:
 
 ```
 WARNING: weekly quota is exhausted (100%) but the session limit still shows room (0%).
@@ -58,6 +64,34 @@ Ask Claude Code about usage limits, or invoke it directly:
 - `scripts/check-usage.sh` — runs `claude -p "/usage"` and extracts just the session and
   week lines, discarding the rest of the (unrelated) usage breakdown.
 - `install.sh` — symlinks this repo into `~/.claude/skills/check-usage`.
+
+## When it cannot get numbers
+
+Every failure prints a line starting with `check-usage:` saying what happened, and the script exits
+non-zero where the figures are unavailable:
+
+| situation | output | exit |
+|---|---|---|
+| `claude` not on PATH | `check-usage: 'claude' not found …` | 127 |
+| `claude -p "/usage"` exits non-zero | `check-usage: 'claude -p /usage' failed (exit N)…` plus its output | 1 |
+| it exits 0 with no output | `check-usage: 'claude -p /usage' returned no output…` | 1 |
+| output has no session/week lines (e.g. the per-session cost summary when not signed in to a subscription, or API-key billing) | `check-usage: no session/week lines found…` plus the raw output | 0 |
+
+## Testing
+
+```bash
+bash tests/test-check-usage.sh
+```
+
+The tests never call the real CLI. Two environment variables make that possible and are also handy
+for trying the skill's behaviour by hand:
+
+- `CHECK_USAGE_INPUT_FILE=<path>` reads canned `/usage` text from a file (see `tests/fixtures/`).
+- `CHECK_USAGE_CLAUDE_BIN=<path>` calls a different `claude` binary.
+
+```bash
+CHECK_USAGE_INPUT_FILE=tests/fixtures/weekly-exhausted.txt bash scripts/check-usage.sh
+```
 
 ## Suggested usage: running autonomously across usage limits
 
