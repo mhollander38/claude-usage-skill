@@ -194,6 +194,9 @@ Research needed (use current docs, this changes often):
 Output: a short write-up in this repo plus any resulting changes to the script's parsing and
 SKILL.md's reporting rules, with fixtures for each plan's `/usage` shape.
 
+**Status (2026-10-03):** research done, see `docs/research/2026-10-03-plan-limits-and-credits.md`. Implementation of its recommendations (cache enrichment, plan-aware wording, fixtures, new eval case) not started.
+
+
 ---
 
 ## F. Deferred from the final review (2026-10-03)
