@@ -1,7 +1,20 @@
 #!/bin/bash
-set -euo pipefail
+# Report Claude Code session/weekly usage against subscription limits.
+#
+# Environment:
+#   CHECK_USAGE_INPUT_FILE  read /usage text from this file instead of calling claude (testing, canned output)
+set -uo pipefail
 
-output="$(claude -p "/usage" 2>&1)"
+if [ -n "${CHECK_USAGE_INPUT_FILE:-}" ]; then
+  if [ ! -r "$CHECK_USAGE_INPUT_FILE" ]; then
+    echo "check-usage: CHECK_USAGE_INPUT_FILE is set but '$CHECK_USAGE_INPUT_FILE' is not readable."
+    exit 2
+  fi
+  output="$(cat "$CHECK_USAGE_INPUT_FILE")"
+else
+  output="$(claude -p "/usage" 2>&1)"
+fi
+
 matched="$(echo "$output" | grep -iE '^Current (session|week)|credit|extra usage|overage' || true)"
 
 if [ -z "$matched" ]; then
