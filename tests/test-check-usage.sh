@@ -398,6 +398,16 @@ assert_contains     "sonnet-only: per-model line relayed" "$out" "Current week (
 assert_not_contains "sonnet-only: per-model 100% is not a WARNING" "$out" "WARNING"
 assert_not_contains "sonnet-only: per-model 100% is not a NOTICE" "$out" "NOTICE"
 
+# --- Demo script (used by eval case 08) ---------------------------------------
+
+if command -v python3 >/dev/null 2>&1; then
+  out="$(bash "$ROOT/tests/demo/credits-billed.sh" 2>&1)"
+  assert_contains "demo credits-billed: WARNING" "$out" "WARNING: weekly quota is exhausted"
+  assert_contains "demo credits-billed: credits check" "$out" "Credits check: usage credits are enabled, so work past 100% is being billed at API rates."
+else
+  echo "SKIP: python3 not found; demo test skipped"
+fi
+
 # --- summary ------------------------------------------------------------------
 
 printf '%d passed, %d failed\n' "$pass" "$fail"
