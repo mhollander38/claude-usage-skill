@@ -33,6 +33,21 @@ that overflow is either being billed as purchased usage credits (extra usage), o
 grace window before a hard stop. Run '/usage-credits' in an interactive session to confirm which.
 ```
 
+After the figures, the script adds best-effort lines from Claude Code's local usage cache when
+`python3` is available and the cache is fresh (it is refreshed by the same `/usage` call):
+
+```
+Plan: Max 5x
+Binding limit: weekly (all models) 89%
+Usage credits: ON but out of credits (balance £0.00), so work stops when a plan limit is hit
+Cloud session credit (cloud sessions only): $103.13 of $250.00 left · expires Nov 5
+```
+
+Under a WARNING it also adds a `Credits check:` line saying whether work past 100% is being billed
+or will stop. The cache is undocumented, so these lines may disappear after a Claude Code update;
+the figures above them never depend on it. See `docs/research/2026-10-03-plan-limits-and-credits.md`
+for how session, weekly, per-model limits and the different credits interact.
+
 This matters because a naive check that only watches session usage (e.g. "pause above ~90%
 session used") will happily keep running once weekly is spent, silently burning purchased
 usage credits (real money) — or riding a grace window that ends without warning.
@@ -90,6 +105,9 @@ for trying the skill's behaviour by hand:
 
 - `CHECK_USAGE_INPUT_FILE=<path>` reads canned `/usage` text from a file (see `tests/fixtures/`).
 - `CHECK_USAGE_CLAUDE_BIN=<path>` calls a different `claude` binary.
+- `CHECK_USAGE_CACHE_FILE=<path>` reads plan/credits from this config JSON (canned mode reads none
+  unless this is set). `CHECK_USAGE_NO_CACHE=1` turns the lines off. `CHECK_USAGE_PYTHON` picks the
+  interpreter.
 
 When `CHECK_USAGE_INPUT_FILE` is set the script prints a `check-usage: reading canned /usage output … (not live)` line first, so canned figures are never mistaken for live ones.
 
@@ -164,3 +182,4 @@ the overflow without the CLI saying so explicitly.
 - A Claude subscription plan (Pro/Max/Team). API-key billing doesn't expose the same
   session/week percentages, in which case the script falls back to printing the raw
   `/usage` output.
+- python3 (optional) for the plan and credits lines.

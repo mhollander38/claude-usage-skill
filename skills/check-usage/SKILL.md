@@ -24,9 +24,15 @@ Current week (Fable): 2% used · resets Oct 4 at 5am (Europe/London)
 ```
 
 Report the session line and the **(all models)** week line as the two headline figures, each with
-its reset time, in one or two friendly sentences. A per-model week line (e.g. `(Fable)`) may also
-appear; it is informational. Mention it only briefly, or when it is the binding limit. Do not fetch
-or relay the rest of the `/usage` breakdown (subagent/skill/plugin stats).
+its reset time, in one or two friendly sentences.
+
+A per-model week line (e.g. `(Fable)` or `(Sonnet only)`) is a sub-cap inside the weekly pool, not
+extra capacity. The session and weekly (all models) limits apply to every model, so per-model room
+never helps when either of those is exhausted. Mention the per-model line briefly, or lead with it
+when the `Binding limit:` line names it or it is at 90% or more. Once a per-model cap is hit, that
+model needs usage credits while other models keep working.
+
+Do not fetch or relay the rest of the `/usage` breakdown (subagent/skill/plugin stats).
 
 The script may add one of these blocks after the figures. Relay them, do not soften them:
 
@@ -36,6 +42,24 @@ The script may add one of these blocks after the figures. Relay them, do not sof
   `/usage-credits` (interactive-only) to confirm which. This applies even when a policy says "keep
   going, don't stop to ask": keep going, but never silently.
 - **`NOTICE:` weekly at 95–99%.** Say so before deciding anything, and say what happens at 100%.
+
+## Plan and credits lines (best effort)
+
+After the figures the script may print lines read from Claude Code's local usage cache. They are
+best effort (undocumented, shown only when the cache is fresh) and may be absent:
+
+- `Plan: …` is the subscription tier. On Pro, and on Team or Enterprise standard seats, Fable models
+  are not included and always run on usage credits.
+- `Binding limit: …` is the limit currently constraining the account. Use it as the headline.
+- `Usage credits: …` says whether work past a plan limit is billed or stops. `ON · … used` means it
+  is billed at API rates. `ON but out of credits` or `OFF` means a hard stop at 100%, whatever the
+  toggle in settings shows.
+- `Cloud session credit: …` or another `… credit: $X of $Y left` line is a separate included credit
+  with its own expiry. It covers only what its label says (for example cloud sessions), not local
+  Claude Code work.
+- `Credits check: …` under a WARNING settles whether the WARNING means a bill or a stop. Relay it.
+
+When these lines are absent, fall back to the WARNING's either/or wording.
 
 ## When the script cannot get numbers
 
@@ -52,7 +76,9 @@ A project's own policy (e.g. CLAUDE.md) overrides this. In its absence:
 
 - **Session ≥ 90%:** pause at the next step boundary rather than starting a step that may be cut
   off. Schedule a resume a few minutes after the session reset time, not exactly on it.
-- **Weekly ≥ 100% (WARNING):** flag it first, as above. Continuing is the user's call, never silent.
+- **Weekly ≥ 100% (WARNING):** flag it first, as above. If credits are unavailable (a `Credits
+  check:` stop line, or the user says the balance is zero), say work will stop at the next request.
+  Continuing on credits is the user's call, never silent.
 - **Weekly 95–99% (NOTICE):** say so, and prefer to finish at a clean checkpoint.
 - **Otherwise:** report the numbers in one line and carry on.
 
@@ -65,6 +91,11 @@ If the user pastes `/usage` output and asks whether to continue, apply the same 
 figures. Do not re-run the script unless they ask or the pasted output is ambiguous. In particular,
 weekly at 100% with session room is the WARNING case even when no WARNING text was pasted: say that
 requests may still be succeeding on purchased credits, and point to `/usage-credits`.
+
+If the user says usage credits are switched on but the balance is zero and auto-reload is off, treat
+credits as unavailable: weekly at 100% is then a hard stop at the next request, not a bill. Say so
+plainly, and point to `/usage-credits` to add credits or turn on auto-reload. Promotional credits, if
+the account has any, are spent before purchased credits.
 
 ## Extra / purchased usage ("usage credits")
 
