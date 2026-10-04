@@ -52,8 +52,8 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
   are not included and always run on usage credits.
 - `Binding limit: …` names the limit currently constraining the account. Lead with it alongside the two
   headline figures; a WARNING still comes first.
-- `Usage credits: …` says whether work past a plan limit is billed or stops. `ON · … used` means it
-  is billed at API rates. `ON but out of credits`, or a line starting `Usage credits: OFF`, means a
+- `Usage credits: …` says whether work past a plan limit is billed or stops. a `Usage credits: ON` line that says work is billed at API rates means it
+  is billed. `ON but out of credits`, or a line starting `Usage credits: OFF`, means a
   hard stop at 100%, even if the toggle in settings shows on. `ON but monthly spend limit reached`
   also means a hard stop. Promotional credits, if any, are spent
   before purchased credits.
@@ -117,7 +117,7 @@ plainly, and point to `/usage-credits` to add credits or turn on auto-reload.
 Anthropic's pay-as-you-go feature for continuing past the plan's included quota is called **usage
 credits** in the current CLI (older naming: "overage" / "extra usage"). It is off by default. If the
 script's output includes a line mentioning credits, extra usage, or overage (a balance, a spend
-amount, or "usage credits are off"), report it alongside the percentages in plain terms. Only a `Usage credits: ON · …` line means work past
+amount, or "usage credits are off"), report it alongside the percentages in plain terms. Only a `Usage credits: ON` line that says work is billed at API rates means work past
 a limit draws on usage credits. Included-credit lines (`… credit: $X of $Y left`) are not purchased
 credits; follow the Plan and credits lines section for them.
 

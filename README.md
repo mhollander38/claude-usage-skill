@@ -64,7 +64,7 @@ cd claude-usage-skill
 ./install.sh
 ```
 
-This symlinks `skills/check-usage` into `~/.claude/skills/check-usage`, so pulling updates in the repo
+This symlinks `skills/check-usage` into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/check-usage` (a previous `~/.claude/skills` symlink is left in place when `CLAUDE_CONFIG_DIR` is set), so pulling updates in the repo
 updates the installed skill automatically. Start a new Claude Code session afterwards —
 skills are loaded at session start.
 
@@ -84,7 +84,7 @@ Ask Claude Code about usage limits, or invoke it directly:
   week lines, and adds a `NOTICE`/`WARNING` block when the week is nearly or fully exhausted.
 - `skills/check-usage/scripts/usage-cache.py` — optional helper that reads the plan, binding limit,
   credits and wrap-up lines from Claude Code's local usage cache.
-- `install.sh` — symlinks `skills/check-usage` into `~/.claude/skills/check-usage`.
+- `install.sh` — symlinks `skills/check-usage` into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/check-usage` (a previous `~/.claude/skills` symlink is left in place when `CLAUDE_CONFIG_DIR` is set).
 - `.claude-plugin/plugin.json` — plugin manifest, so the repo can also be installed as a plugin or
   run under `claude plugin eval`.
 

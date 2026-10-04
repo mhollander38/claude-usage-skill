@@ -179,7 +179,7 @@ if command -v python3 >/dev/null 2>&1; then
   assert_not_contains "cache max5x: no email" "$out" "example.com"
   assert_not_contains "cache max5x: no uuid" "$out" "00000000-"
 
-  run_cache_py "$FIX/cache-credits-on.json"
+  run_cache_py "$FIX/cache-credits-on.json" "" CHECK_USAGE_DEBUG=1
   assert_contains "cache credits on: pro plan note" "$out" "Plan: Pro (Fable models are not included; they always use usage credits)"
   assert_contains "cache credits on: weekly binding" "$out" "Binding limit: weekly (all models) 100%"
   assert_contains "cache credits on: billed" "$out" "Usage credits: ON · £12.60 used of £25.00 monthly limit (work past a plan limit is billed at API rates)"
@@ -245,10 +245,10 @@ if command -v python3 >/dev/null 2>&1; then
   assert_contains     "cache local credit: note" "$out" "Local included credit available"
   assert_not_contains "cache local credit: no obfuscated key" "$out" "cinder"
 
-  run_cache_py "$FIX/cache-spend-cap.json"
+  run_cache_py "$FIX/cache-spend-cap.json" "" CHECK_USAGE_DEBUG=1
   assert_contains "cache spend cap: line" "$out" "Usage credits: ON but monthly spend limit reached (£25.00 of £25.00)"
 
-  run_cache_py "$FIX/cache-odd-values.json"
+  run_cache_py "$FIX/cache-odd-values.json" "" CHECK_USAGE_DEBUG=1
   assert_contains     "cache odd: tier" "$out" "Plan: unrecognised tier"
   assert_contains     "cache odd: binding" "$out" "Binding limit: another limit 50%"
   assert_contains     "cache odd: off" "$out" "Usage credits: OFF, so work stops when a plan limit is hit"
@@ -264,6 +264,7 @@ if command -v python3 >/dev/null 2>&1; then
   run_cache_py "$FIX/cache-max5x.json" "" CHECK_USAGE_CLI_VERSION=2.1.289 CHECK_USAGE_DEBUG=1
   assert_contains "wrap-up max: line" "$out" "$WRAP"
   assert_not_contains "wrap-up max: no pro note" "$out" "once per weekly period"
+  assert_not_contains "wrap-up max: no credits-after sentence" "$out" "the wrap-up is used first"
 
   run_cache_py "$FIX/cache-max5x.json" "" CHECK_USAGE_CLI_VERSION=2.1.276 CHECK_USAGE_DEBUG=1
   assert_not_contains "wrap-up old version: no line" "$out" "Wrap-up allowance"
@@ -283,6 +284,12 @@ if command -v python3 >/dev/null 2>&1; then
 
   run_cache_py "$FIX/cache-max5x-low-session.json" "" CHECK_USAGE_CLI_VERSION=2.1.289 CHECK_USAGE_DEBUG=1
   assert_not_contains "wrap-up low session: no line" "$out" "Wrap-up allowance"
+
+  # Spend-cap case at session 85% (the fixture is at 40%): credits are ON but capped.
+  sed 's/"percent": 40/"percent": 85/; s/"percent": 100/"percent": 50/' "$FIX/cache-spend-cap.json" > "$TMP/spend-cap-85.json"
+  run_cache_py "$TMP/spend-cap-85.json" "" CHECK_USAGE_CLI_VERSION=2.1.289 CHECK_USAGE_DEBUG=1
+  assert_contains     "wrap-up spend cap: line" "$out" "Wrap-up allowance:"
+  assert_not_contains "wrap-up spend cap: no credits-after sentence" "$out" "the wrap-up is used first"
 
   run_cache_py "$FIX/cache-max5x-session80.json" "" CHECK_USAGE_CLI_VERSION=2.1.289 CHECK_USAGE_DEBUG=1
   assert_contains "wrap-up session exactly 80: line" "$out" "Wrap-up allowance:"
@@ -361,8 +368,9 @@ if command -v python3 >/dev/null 2>&1; then
   assert_contains     "wired normal: binding limit line" "$out" "Binding limit: session 84%"
 
   # Canned mode must not read the real config even when HOME holds a valid cache.
-  cp "$FIX/cache-max5x.json" "$TMP/home/.claude.json"
-  out="$(env -u CLAUDE_CONFIG_DIR HOME="$TMP/home" CHECK_USAGE_INPUT_FILE="$FIX/normal.txt" \
+  mkdir -p "$TMP/home-canned"
+  cp "$FIX/cache-max5x.json" "$TMP/home-canned/.claude.json"
+  out="$(env -u CLAUDE_CONFIG_DIR HOME="$TMP/home-canned" CHECK_USAGE_INPUT_FILE="$FIX/normal.txt" \
     CHECK_USAGE_CLAUDE_BIN="$TMP/sentinel" CHECK_USAGE_NOW_MS="$NOW_MS" bash "$SCRIPT" 2>&1)"
   assert_not_contains "canned mode ignores HOME cache" "$out" "Plan:"
 
