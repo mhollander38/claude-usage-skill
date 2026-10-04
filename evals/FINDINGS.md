@@ -196,6 +196,8 @@ SKILL.md's reporting rules, with fixtures for each plan's `/usage` shape.
 
 **Status (2026-10-03):** research done, see `docs/research/2026-10-03-plan-limits-and-credits.md`. Implementation of its recommendations (cache enrichment, plan-aware wording, fixtures, new eval case) not started.
 
+**Status (2026-10-04):** implemented in e7eabb4..6607434 — plan, binding-limit, usage-credits and included-credit lines from the local cache; definitive Credits check under the WARNING; per-model sub-cap rule in SKILL.md; eval case 07. Team/Enterprise /usage shapes remain unobserved.
+
 
 ---
 
