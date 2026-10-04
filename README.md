@@ -58,15 +58,19 @@ usage credits (real money) — or riding a grace window that ends without warnin
 
 ## Install
 
+Clone the repository anywhere you like, then link the skill folder into your Claude Code
+skills directory:
+
 ```bash
 git clone https://github.com/mhollander38/claude-usage-skill.git
-cd claude-usage-skill
-./install.sh
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/claude-usage-skill/skills/check-usage" ~/.claude/skills/check-usage
 ```
 
-This symlinks `skills/check-usage` into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/check-usage` (a previous `~/.claude/skills` symlink is left in place when `CLAUDE_CONFIG_DIR` is set), so pulling updates in the repo
-updates the installed skill automatically. Start a new Claude Code session afterwards —
-skills are loaded at session start.
+If you use `CLAUDE_CONFIG_DIR`, link into `$CLAUDE_CONFIG_DIR/skills` instead. The repo also
+ships `install.sh`, which does the same link with a safety check; read it before running it.
+Because the skill is a symlink, pulling updates in the repo updates the installed skill.
+Start a new Claude Code session afterwards — skills are loaded at session start.
 
 ## Use
 
