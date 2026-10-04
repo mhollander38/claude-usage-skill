@@ -186,6 +186,63 @@ else
   echo "SKIP: python3 not found; enrichment helper tests skipped"
 fi
 
+# --- Enrichment wiring --------------------------------------------------------
+
+run_with_cache() { # FIXTURE CACHE_FILE [VAR=value ...] -> sets out, rc
+  local fx="$1" cf="$2"
+  shift 2
+  out="$(env CHECK_USAGE_INPUT_FILE="$fx" CHECK_USAGE_CLAUDE_BIN="$TMP/sentinel" \
+    CHECK_USAGE_CACHE_FILE="$cf" CHECK_USAGE_NOW_MS="$NOW_MS" "$@" bash "$SCRIPT" 2>&1)"
+  rc=$?
+}
+
+if command -v python3 >/dev/null 2>&1; then
+  run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-max5x.json"
+  assert_eq       "wired out-of-credits: exit 0" 0 "$rc"
+  assert_contains "wired out-of-credits: WARNING kept" "$out" "WARNING: weekly quota is exhausted (100%)"
+  assert_contains "wired out-of-credits: plan line" "$out" "Plan: Max 5x"
+  assert_contains "wired out-of-credits: credits check stop" "$out" "Credits check: usage credits are unavailable (see the Usage credits line), so this is a hard stop, not a bill."
+
+  run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-credits-on.json"
+  assert_contains "wired credits on: credits check billed" "$out" "Credits check: usage credits are enabled, so work past 100% is being billed at API rates."
+
+  run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-max5x.json" CHECK_USAGE_NOW_MS=1791095524300
+  assert_contains     "wired stale: WARNING kept" "$out" "WARNING: weekly quota is exhausted"
+  assert_not_contains "wired stale: no plan line" "$out" "Plan:"
+  assert_not_contains "wired stale: no credits check" "$out" "Credits check:"
+
+  run_with_cache "$FIX/normal.txt" "$FIX/cache-max5x.json" CHECK_USAGE_NO_CACHE=1
+  assert_not_contains "wired no-cache flag: no plan line" "$out" "Plan:"
+
+  run_with_cache "$FIX/normal.txt" "$FIX/cache-max5x.json" CHECK_USAGE_PYTHON="$TMP/no-such-python"
+  assert_eq           "wired python missing: exit 0" 0 "$rc"
+  assert_not_contains "wired python missing: no plan line" "$out" "Plan:"
+  assert_contains     "wired python missing: figures still printed" "$out" "Current session: 23% used"
+
+  run_with_cache "$FIX/normal.txt" "$FIX/cache-max5x.json"
+  assert_not_contains "wired normal: no credits check without WARNING" "$out" "Credits check:"
+  assert_contains     "wired normal: binding limit line" "$out" "Binding limit: session 84%"
+
+  # Canned mode must not read the real config even when HOME holds a valid cache.
+  mkdir -p "$TMP/home"
+  cp "$FIX/cache-max5x.json" "$TMP/home/.claude.json"
+  out="$(env -u CLAUDE_CONFIG_DIR HOME="$TMP/home" CHECK_USAGE_INPUT_FILE="$FIX/normal.txt" \
+    CHECK_USAGE_CLAUDE_BIN="$TMP/sentinel" CHECK_USAGE_NOW_MS="$NOW_MS" bash "$SCRIPT" 2>&1)"
+  assert_not_contains "canned mode ignores HOME cache" "$out" "Plan:"
+fi
+
+# --- Plan shapes --------------------------------------------------------------
+
+run_with_file "$FIX/pro-two-line.txt"
+assert_eq           "pro two-line: exit 0" 0 "$rc"
+assert_contains     "pro two-line: week relayed" "$out" "Current week (all models): 62% used"
+assert_not_contains "pro two-line: no WARNING" "$out" "WARNING"
+
+run_with_file "$FIX/max-sonnet-only.txt"
+assert_contains     "sonnet-only: per-model line relayed" "$out" "Current week (Sonnet only): 100% used"
+assert_not_contains "sonnet-only: per-model 100% is not a WARNING" "$out" "WARNING"
+assert_not_contains "sonnet-only: per-model 100% is not a NOTICE" "$out" "NOTICE"
+
 # --- summary ------------------------------------------------------------------
 
 printf '%d passed, %d failed\n' "$pass" "$fail"

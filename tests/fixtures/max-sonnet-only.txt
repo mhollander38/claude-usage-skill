@@ -1,0 +1,3 @@
+Current session: 15% used · resets Oct 4 at 1pm (Europe/London)
+Current week (all models): 70% used · resets Oct 9 at 5am (Europe/London)
+Current week (Sonnet only): 100% used · resets Oct 9 at 5am (Europe/London)
