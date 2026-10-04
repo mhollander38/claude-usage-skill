@@ -135,6 +135,57 @@ assert_not_contains "both 100: no NOTICE at 100" "$out" "NOTICE"
 run_with_file "$FIX/normal.txt"
 assert_not_contains "normal: no NOTICE at 49" "$out" "NOTICE"
 
+# --- Enrichment helper (usage-cache.py) -------------------------------------
+
+NOW_MS=1791094954300   # 30 s after the fixtures' fetchedAtMs
+CACHE_PY="$(dirname "$SCRIPT")/usage-cache.py"
+
+if command -v python3 >/dev/null 2>&1; then
+  run_cache_py() { # CACHE_FILE [NOW_MS] -> sets out, rc
+    out="$(CHECK_USAGE_NOW_MS="${2:-$NOW_MS}" python3 "$CACHE_PY" "$1" 2>&1)"
+    rc=$?
+  }
+
+  run_cache_py "$FIX/cache-max5x.json"
+  assert_eq       "cache max5x: exit 0" 0 "$rc"
+  assert_contains "cache max5x: plan" "$out" "Plan: Max 5x"
+  assert_contains "cache max5x: binding limit" "$out" "Binding limit: session 84%"
+  assert_contains "cache max5x: out of credits" "$out" "Usage credits: ON but out of credits (balance £0.00), so work stops when a plan limit is hit"
+  assert_contains "cache max5x: cloud credit" "$out" "Cloud session credit (cloud sessions only): \$103.13 of \$250.00 left · expires Nov 5"
+  assert_not_contains "cache max5x: no obfuscated key" "$out" "iguana"
+  assert_not_contains "cache max5x: no email" "$out" "example.com"
+  assert_not_contains "cache max5x: no uuid" "$out" "00000000-"
+
+  run_cache_py "$FIX/cache-credits-on.json"
+  assert_contains "cache credits on: pro plan note" "$out" "Plan: Pro (Fable models are not included; they always use usage credits)"
+  assert_contains "cache credits on: weekly binding" "$out" "Binding limit: weekly (all models) 100%"
+  assert_contains "cache credits on: billed" "$out" "Usage credits: ON · £12.60 used of £25.00 monthly limit (work past a plan limit is billed at API rates)"
+
+  run_cache_py "$FIX/cache-max5x.json" 1791095524300   # 600 s later
+  assert_eq "cache stale: exit 0" 0 "$rc"
+  assert_eq "cache stale: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-max5x.json" 1791094000000   # cache 15 min in the future
+  assert_eq "cache future: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-other-account.json"
+  assert_eq "cache other account: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-malformed.json"
+  assert_eq "cache malformed: exit 0" 0 "$rc"
+  assert_eq "cache malformed: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-partial.json"
+  assert_eq "cache partial: exit 0" 0 "$rc"
+  assert_not_contains "cache partial: no traceback" "$out" "Traceback"
+
+  run_cache_py "$TMP/does-not-exist.json"
+  assert_eq "cache missing: exit 0" 0 "$rc"
+  assert_eq "cache missing: no output" "" "$out"
+else
+  echo "SKIP: python3 not found; enrichment helper tests skipped"
+fi
+
 # --- summary ------------------------------------------------------------------
 
 printf '%d passed, %d failed\n' "$pass" "$fail"
