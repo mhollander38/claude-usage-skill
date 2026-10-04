@@ -55,7 +55,7 @@ Opus-family cap, so the per-model line can be any of Opus, Sonnet or Fable depen
    are used before purchased credits", so **promotional credits are a sub-balance of usage credits**,
    not a separate limit. Usage bundles ($50/$250/$1000 prepaid, 10–30% off) top up the same balance.
 2. **Cloud session credits.** An included credit that "applies automatically to cloud sessions. After
-   it's used or expires, your plan's regular usage applies." On this account: £103 of £250 left,
+   it's used or expires, your plan's regular usage applies." On this account: $103 of $250 left,
    expires 7:59 AM GMT, November 5. This is the bucket the mobile app and the CLI text do not show.
    In the cached API response it appears under an obfuscated key (`iguana_necktie`) with
    `limit_dollars: 250`, `used_dollars: 146.87`, `utilization: 58.7`. The 2.1.288 client has no
@@ -106,7 +106,7 @@ hard stop when the week hits 100%** (cloud session credits only cover cloud sess
    - `Usage credits: ON but out of credits (balance £0.00)` | `ON · £X used of £Y monthly limit` |
      `OFF`, from `extra_usage` + `spend`. At weekly 100% this turns the WARNING into a definitive
      statement: "work will stop" vs "work continues on credits at API rates".
-   - `Cloud session credit: £103 of £250 left · expires Nov 5 (cloud sessions only)` when a
+   - `Cloud session credit: $103 of $250 left · expires Nov 5 (cloud sessions only)` when a
      dollar-denominated bucket is present (any top-level key with `limit_dollars` that is not
      `five_hour`/`seven_day`). Do not name the obfuscated key.
 3. **Interpretation rule for the per-model line**, in SKILL.md: the Fable (or Opus/Sonnet) line is a

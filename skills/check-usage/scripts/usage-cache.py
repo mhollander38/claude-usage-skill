@@ -21,7 +21,18 @@ TIERS = {
     "default_claude_pro": "Pro",
     "default_claude_max_5x": "Max 5x",
     "default_claude_max_20x": "Max 20x",
+    "claude_team": "Team",
+    "claude_enterprise": "Enterprise",
 }
+KNOWN_OFF_REASONS = {
+    "org_level_disabled",
+    "org_level_disabled_until",
+    "member_level_disabled",
+    "seat_tier_level_disabled",
+    "overage_not_provisioned",
+}
+LOCAL_CREDIT_NOTE = ("Local included credit available: work past a plan limit may draw on it "
+                     "before stopping.")
 CURRENCY_SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
 # Dollar-denominated credit buckets. Keys are server-side codenames; never print them.
 CREDIT_LABELS = {
@@ -33,6 +44,7 @@ FUTURE_TOLERANCE_MS = 60_000
 
 
 def money(minor, currency, places):
+    currency = currency if isinstance(currency, str) else None
     symbol = CURRENCY_SYMBOLS.get(currency or "", (currency + " ") if currency else "")
     return f"{symbol}{minor / (10 ** places):.{places}f}"
 
@@ -44,10 +56,11 @@ def limit_label(entry):
     if kind == "weekly_all":
         return "weekly (all models)"
     if kind == "weekly_scoped":
-        scope = entry.get("scope") or {}
-        model = scope.get("model") or {} if isinstance(scope, dict) else {}
-        return f"weekly ({model.get('display_name') or 'scoped'})"
-    return str(kind or "unknown")
+        scope = entry.get("scope")
+        model = scope.get("model") if isinstance(scope, dict) else None
+        name = model.get("display_name") if isinstance(model, dict) else None
+        return f"weekly ({name or 'scoped'})"
+    return "another limit"
 
 
 def short_date(iso):
@@ -62,7 +75,7 @@ def plan_line(account):
     tier = account.get("organizationRateLimitTier") or account.get("userRateLimitTier")
     if not tier:
         return None
-    name = TIERS.get(tier, tier)
+    name = TIERS.get(tier, "unrecognised tier") if isinstance(tier, str) else "unrecognised tier"
     if tier == "default_claude_pro":
         name += " (Fable models are not included; they always use usage credits)"
     return f"Plan: {name}"
@@ -90,22 +103,28 @@ def credits_line(util):
     if extra.get("is_enabled"):
         line = "Usage credits: ON"
         used = extra.get("used_credits")
-        if isinstance(used, (int, float)):
+        limit = extra.get("monthly_limit")
+        numeric = (int, float)
+        if isinstance(used, numeric) and isinstance(limit, numeric) and used >= limit:
+            return (f"Usage credits: ON but monthly spend limit reached "
+                    f"({money(used, currency, places)} of {money(limit, currency, places)}), "
+                    "so work stops when a plan limit is hit")
+        if isinstance(used, numeric):
             line += f" · {money(used, currency, places)} used"
-            limit = extra.get("monthly_limit")
-            if isinstance(limit, (int, float)):
+            if isinstance(limit, numeric):
                 line += f" of {money(limit, currency, places)} monthly limit"
         return line + " (work past a plan limit is billed at API rates)"
     reason = extra.get("disabled_reason")
     if reason == "out_of_credits":
         return (f"Usage credits: ON but out of credits (balance {money(0, currency, places)}), "
                 "so work stops when a plan limit is hit")
-    detail = f" ({reason})" if reason and not extra.get("user_disabled") else ""
+    detail = f" ({reason})" if reason in KNOWN_OFF_REASONS and not extra.get("user_disabled") else ""
     return f"Usage credits: OFF{detail}, so work stops when a plan limit is hit"
 
 
-def credit_bucket_lines(util):
-    lines = []
+def credit_buckets(util):
+    """Yield (label, remaining, line) for each dollar credit bucket."""
+    found = []
     for key, bucket in util.items():
         if key in NOT_CREDIT_BUCKETS or not isinstance(bucket, dict):
             continue
@@ -123,8 +142,17 @@ def credit_bucket_lines(util):
         expires = short_date(bucket.get("resets_at"))
         if expires:
             line += f" · expires {expires}"
-        lines.append(line)
-    return lines
+        found.append((label, remaining, line))
+    return found
+
+
+def credit_bucket_lines(util):
+    return [line for _, _, line in credit_buckets(util)]
+
+
+def local_credit_available(util):
+    return any(remaining > 0 for label, remaining, _ in credit_buckets(util)
+               if label != CREDIT_LABELS["iguana_necktie"])
 
 
 def report(cfg, now_ms, max_age_s):
@@ -141,12 +169,29 @@ def report(cfg, now_ms, max_age_s):
     if now_ms - fetched > max_age_s * 1000 or fetched - now_ms > FUTURE_TOLERANCE_MS:
         return []
     cache_account, profile_account = cache.get("accountUuid"), account.get("accountUuid")
-    if cache_account and profile_account and cache_account != profile_account:
+    if profile_account and cache_account != profile_account:
         return []
     util = cache["utilization"]
-    lines = [plan_line(account), binding_line(util), credits_line(util)]
-    lines += credit_bucket_lines(util)
-    return [line for line in lines if line]
+    lines = []
+
+    def section(fn, *args):
+        try:
+            result = fn(*args)
+        except Exception:
+            return None
+        return result
+
+    plan = section(plan_line, account)
+    binding = section(binding_line, util)
+    credits = section(credits_line, util)
+    buckets = section(credit_bucket_lines, util) or []
+    for line in (plan, binding, credits):
+        if line:
+            lines.append(line)
+    lines += buckets
+    if credits and "work stops" in credits and section(local_credit_available, util):
+        lines.append(LOCAL_CREDIT_NOTE)
+    return lines
 
 
 def main():
@@ -157,8 +202,9 @@ def main():
             cfg = json.load(f)
         now_ms = int(os.environ.get("CHECK_USAGE_NOW_MS") or time.time() * 1000)
         max_age_s = int(os.environ.get("CHECK_USAGE_CACHE_MAX_AGE") or 180)
-        for line in report(cfg, now_ms, max_age_s):
-            print(line)
+        lines = report(cfg, now_ms, max_age_s)
+        if lines:
+            print("\n".join(lines))
     except Exception:  # undocumented input: stay silent rather than break the report
         return
 

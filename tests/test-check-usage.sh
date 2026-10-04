@@ -46,6 +46,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 printf '#!/bin/bash\necho SENTINEL-CALLED; exit 99\n' > "$TMP/sentinel"
 chmod +x "$TMP/sentinel"
+unset CHECK_USAGE_CACHE_FILE CHECK_USAGE_NO_CACHE CHECK_USAGE_PYTHON CHECK_USAGE_CACHE_MAX_AGE CHECK_USAGE_NOW_MS CHECK_USAGE_INPUT_FILE CHECK_USAGE_CLAUDE_BIN
 
 # --- A4: canned input ---------------------------------------------------------
 
@@ -178,6 +179,31 @@ if command -v python3 >/dev/null 2>&1; then
   run_cache_py "$FIX/cache-partial.json"
   assert_eq "cache partial: exit 0" 0 "$rc"
   assert_not_contains "cache partial: no traceback" "$out" "Traceback"
+  assert_eq "cache partial: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-bad-scope.json"
+  assert_contains "cache bad scope: plan" "$out" "Plan: Max 5x"
+  assert_contains "cache bad scope: credits" "$out" "Usage credits: ON but out of credits"
+  assert_contains "cache bad scope: binding" "$out" "Binding limit: weekly (scoped) 100%"
+
+  run_cache_py "$FIX/cache-no-account.json"
+  assert_eq "cache no cache account: no output" "" "$out"
+
+  run_cache_py "$FIX/cache-local-credit.json"
+  assert_contains     "cache local credit: bucket" "$out" "Claude Code and Cowork credit: \$50.00 of \$50.00 left"
+  assert_contains     "cache local credit: note" "$out" "Local included credit available"
+  assert_not_contains "cache local credit: no obfuscated key" "$out" "cinder"
+
+  run_cache_py "$FIX/cache-spend-cap.json"
+  assert_contains "cache spend cap: line" "$out" "Usage credits: ON but monthly spend limit reached (£25.00 of £25.00)"
+
+  run_cache_py "$FIX/cache-odd-values.json"
+  assert_contains     "cache odd: tier" "$out" "Plan: unrecognised tier"
+  assert_contains     "cache odd: binding" "$out" "Binding limit: another limit 50%"
+  assert_contains     "cache odd: off" "$out" "Usage credits: OFF, so work stops when a plan limit is hit"
+  assert_not_contains "cache odd: no kind" "$out" "otter"
+  assert_not_contains "cache odd: no reason" "$out" "zebra"
+  assert_not_contains "cache odd: no tier id" "$out" "some_new_tier"
 
   run_cache_py "$TMP/does-not-exist.json"
   assert_eq "cache missing: exit 0" 0 "$rc"
@@ -205,6 +231,12 @@ if command -v python3 >/dev/null 2>&1; then
 
   run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-credits-on.json"
   assert_contains "wired credits on: credits check billed" "$out" "Credits check: usage credits are enabled, so work past 100% is being billed at API rates."
+
+  run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-local-credit.json"
+  assert_contains "wired local credit: credits check" "$out" "Credits check: an included credit may cover work past 100%"
+
+  run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-spend-cap.json"
+  assert_contains "wired spend cap: credits check stop" "$out" "Credits check: usage credits are unavailable (see the Usage credits line), so this is a hard stop, not a bill."
 
   run_with_cache "$FIX/weekly-exhausted.txt" "$FIX/cache-max5x.json" CHECK_USAGE_NOW_MS=1791095524300
   assert_contains     "wired stale: WARNING kept" "$out" "WARNING: weekly quota is exhausted"

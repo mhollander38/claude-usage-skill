@@ -50,15 +50,20 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
 
 - `Plan: …` is the subscription tier. On Pro, and on Team or Enterprise standard seats, Fable models
   are not included and always run on usage credits.
-- `Binding limit: …` is the limit currently constraining the account. Use it as the headline.
+- `Binding limit: …` names the limit currently constraining the account. Lead with it alongside the two
+  headline figures; a WARNING still comes first.
 - `Usage credits: …` says whether work past a plan limit is billed or stops. `ON · … used` means it
   is billed at API rates. `ON but out of credits`, or a line starting `Usage credits: OFF`, means a
-  hard stop at 100%, even if the toggle in settings shows on. Promotional credits, if any, are spent
+  hard stop at 100%, even if the toggle in settings shows on. `ON but monthly spend limit reached`
+  also means a hard stop. Promotional credits, if any, are spent
   before purchased credits.
 - A `… credit: $X of $Y left` line is a separate included credit with its own expiry. It covers only
   what its label says: a `Claude Code and Cowork credit` line does apply to local Claude Code work; a
   `Cloud session credit (cloud sessions only)` line does not.
-- `Credits check: …` under a WARNING settles whether the WARNING means a bill or a stop. Relay it.
+- `Local included credit available: …` means a credit that applies to local Claude Code work still has
+  a balance, so work may continue on it before a hard stop.
+- `Credits check: …` under a WARNING says whether the WARNING means a bill, a stop, or an included
+  credit covering the gap. Relay it.
 
 When these lines are absent, fall back to the WARNING's either/or wording.
 
@@ -95,16 +100,16 @@ requests may still be succeeding on usage credits, if the account has a balance,
 
 If the user says usage credits are switched on but the balance is zero and auto-reload is off, treat
 credits as unavailable: weekly at 100% is then a hard stop at the next request, not a bill. Say so
-plainly, and point to `/usage-credits` to add credits or turn on auto-reload. Promotional credits, if
-the account has any, are spent before purchased credits.
+plainly, and point to `/usage-credits` to add credits or turn on auto-reload.
 
 ## Extra / purchased usage ("usage credits")
 
 Anthropic's pay-as-you-go feature for continuing past the plan's included quota is called **usage
 credits** in the current CLI (older naming: "overage" / "extra usage"). It is off by default. If the
 script's output includes a line mentioning credits, extra usage, or overage (a balance, a spend
-amount, or "usage credits are off"), report it alongside the percentages in plain terms, e.g. "you
-also have $X of purchased usage credits remaining; work past the weekly limit is drawing on that."
+amount, or "usage credits are off"), report it alongside the percentages in plain terms. Only a `Usage credits: ON · …` line means work past
+a limit draws on usage credits. Included-credit lines (`… credit: $X of $Y left`) are not purchased
+credits; follow the Plan and credits lines section for them.
 
 To enable, buy, or check credits, the user runs `/usage-credits` in an **interactive** session (it
 opens `claude.ai/settings/usage` in a browser). On Team/Enterprise plans an org admin manages it at

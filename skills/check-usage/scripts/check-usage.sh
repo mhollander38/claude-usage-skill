@@ -92,11 +92,17 @@ if [ -n "${week_pct:-}" ] && [ -n "${session_pct:-}" ] && [ "$week_pct" -ge 100 
   echo "A healthy session percentage does not mean capacity is fine here — if requests are still succeeding,"
   echo "that overflow is either being billed as purchased usage credits (extra usage), or you're in a brief"
   echo "grace window before a hard stop. Run '/usage-credits' in an interactive session to confirm which."
-  if echo "$enrich" | grep -q '^Usage credits: ON ·'; then
-    echo "Credits check: usage credits are enabled, so work past 100% is being billed at API rates."
-  elif echo "$enrich" | grep -q '^Usage credits:'; then
-    echo "Credits check: usage credits are unavailable (see the Usage credits line), so this is a hard stop, not a bill."
-  fi
+  case "$enrich" in
+    *"Local included credit available"*)
+      echo "Credits check: an included credit may cover work past 100% before it stops (see the credit lines)."
+      ;;
+    *"Usage credits: ON ·"*)
+      echo "Credits check: usage credits are enabled, so work past 100% is being billed at API rates."
+      ;;
+    *"Usage credits:"*)
+      echo "Credits check: usage credits are unavailable (see the Usage credits line), so this is a hard stop, not a bill."
+      ;;
+  esac
 elif [ -n "${week_pct:-}" ] && [ "$week_pct" -ge 95 ] && [ "$week_pct" -lt 100 ]; then
   echo
   echo "NOTICE: weekly quota is nearly exhausted (${week_pct}%). Once it reaches 100%, further requests either"

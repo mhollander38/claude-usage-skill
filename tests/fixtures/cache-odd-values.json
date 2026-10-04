@@ -1,0 +1,83 @@
+{
+  "oauthAccount": {
+    "accountUuid": "00000000-0000-0000-0000-000000000001",
+    "organizationRateLimitTier": "some_new_tier",
+    "organizationType": "claude_max",
+    "emailAddress": "someone@example.com"
+  },
+  "cachedUsageUtilization": {
+    "fetchedAtMs": 1791094924300,
+    "accountUuid": "00000000-0000-0000-0000-000000000001",
+    "utilization": {
+      "five_hour": {
+        "utilization": 84,
+        "resets_at": "2026-10-04T09:00:00+00:00",
+        "limit_dollars": null,
+        "used_dollars": null,
+        "remaining_dollars": null
+      },
+      "seven_day": {
+        "utilization": 11,
+        "resets_at": "2026-10-11T04:00:00+00:00",
+        "limit_dollars": null,
+        "used_dollars": null,
+        "remaining_dollars": null
+      },
+      "iguana_necktie": {
+        "utilization": 58.749594,
+        "resets_at": "2026-11-05T07:59:00+00:00",
+        "limit_dollars": 250,
+        "used_dollars": 146.873985,
+        "remaining_dollars": 103.126015,
+        "locked_reason": null
+      },
+      "extra_usage": {
+        "is_enabled": false,
+        "disabled_reason": "zebra_reason",
+        "currency": 826
+      },
+      "spend": {
+        "balance": null,
+        "enabled": false,
+        "disabled_reason": "out_of_credits"
+      },
+      "limits": [
+        {
+          "kind": "otter_lagoon",
+          "percent": 50,
+          "is_active": true
+        },
+        {
+          "kind": "session",
+          "group": "session",
+          "percent": 84,
+          "severity": "warning",
+          "scope": null,
+          "is_active": true
+        },
+        {
+          "kind": "weekly_all",
+          "group": "weekly",
+          "percent": 11,
+          "severity": "normal",
+          "scope": null,
+          "is_active": false
+        },
+        {
+          "kind": "weekly_scoped",
+          "group": "weekly",
+          "percent": 3,
+          "severity": "normal",
+          "scope": {
+            "model": {
+              "id": null,
+              "display_name": "Fable"
+            },
+            "surface": null
+          },
+          "is_active": false
+        }
+      ]
+    }
+  }
+}
