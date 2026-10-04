@@ -689,3 +689,61 @@ claude plugin eval . --runs 1 --ablation with-without --no-scaffold --no-publish
 Record in the report: the full summary table; for case 07 whether the skill fired and the Δ; that 05/06 negatives still show `skill-not-fired` 0x in both arms; no `⚠ case … cannot pass` notices. Do not edit any skill file based on the result; report it.
 
 - [ ] **Step 4: Commit** `evals/07-pasted-out-of-credits evals/FINDINGS.md` with message `Add out-of-credits eval case; record E1 implementation status` and the trailer lines. Do not push.
+
+---
+
+### Task 5: Wrap-up allowance (added 2026-10-04 at the user's request)
+
+Source: https://support.claude.com/en/articles/17040437-claude-code-wrap-up-allowance — if Claude Code hits the five-hour limit partway through a response, it may keep working briefly to reach a stopping point. Pro, Max, Team premium seats; Claude Code ≥ 2.1.277; not for API key / third-party cloud. Pro: up to once per weekly period. Max/Team premium: each time a five-hour limit is reached, within the weekly limit. Applies only to a response already in progress; new messages after the limit do not get it. Counts toward the weekly limit. With usage credits on, the allowance is used first, then credits. Banner: "Usage limit reached · wrapping up" (credits on: "Usage limit reached · brief included wrap-up, then usage credits"). Not shown in /usage or the usage cache.
+
+**Files:**
+- Modify: `skills/check-usage/scripts/usage-cache.py`
+- Modify: `skills/check-usage/scripts/check-usage.sh`
+- Modify: `tests/test-check-usage.sh`
+- Modify: `skills/check-usage/SKILL.md`, `README.md`, `docs/research/2026-10-03-plan-limits-and-credits.md`
+
+**Interfaces:**
+- New env `CHECK_USAGE_CLI_VERSION` (version string like `2.1.289`). Live mode: check-usage.sh sets it from `"$claude_bin" --version` (first `N.N.N` token; empty on failure) unless already set. Canned mode: only what the caller sets.
+- usage-cache.py prints one extra line, last, when ALL hold: version ≥ 2.1.277 (parse major.minor.patch ints; unparsable ⇒ skip), tier is Pro or Max 5x/20x (`default_claude_pro`, `default_claude_max_5x`, `default_claude_max_20x`), and the `limits[]` entry with `kind == "session"` has `percent >= 80`.
+
+- [ ] **Step 1: Tests first** — append to the enrichment helper block (inside the `if command -v python3` guard):
+```bash
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.289 python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_contains "wrap-up max: line" "$out" "Wrap-up allowance: if the 5-hour limit is reached mid-response, Claude Code may keep working briefly to a stopping point (\"Usage limit reached · wrapping up\"). It counts toward the weekly limit and never covers starting new work."
+  assert_not_contains "wrap-up max: no pro note" "$out" "once per weekly period"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.276 python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up old version: no line" "$out" "Wrap-up allowance"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up no version: no line" "$out" "Wrap-up allowance"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=garbage python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up bad version: no line" "$out" "Wrap-up allowance"
+```
+Create `tests/fixtures/cache-pro-near-session.json`: `cache-credits-on.json` with the session limit entry `{"kind": "session", "percent": 92, "is_active": true}` and the weekly entry `is_active: false`, percent 40. Assert with version 2.1.289:
+```bash
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.289 python3 "$CACHE_PY" "$FIX/cache-pro-near-session.json" 2>&1)"
+  assert_contains "wrap-up pro: once per week" "$out" "On Pro it is available once per weekly period."
+  assert_contains "wrap-up pro: credits after" "$out" "With usage credits on, the wrap-up is used first, then credits."
+```
+Create `tests/fixtures/cache-max5x-low-session.json`: `cache-max5x.json` with the session percent 40. Assert no `Wrap-up allowance` line with version 2.1.289.
+
+Wiring test (append in the wiring block): canned `normal.txt` + `cache-max5x.json` + `CHECK_USAGE_CLI_VERSION=2.1.289` via `run_with_cache … CHECK_USAGE_CLI_VERSION=2.1.289` → contains `Wrap-up allowance:`. And a live-mode version-detection test using the fake binary: create `$TMP/fakeclaude-ver` that prints `2.1.290 (Claude Code)` for `--version` and the normal fixture's three lines for `-p /usage`; run `env -u CHECK_USAGE_INPUT_FILE CHECK_USAGE_CLAUDE_BIN="$TMP/fakeclaude-ver" CHECK_USAGE_CACHE_FILE="$FIX/cache-max5x.json" CHECK_USAGE_NOW_MS="$NOW_MS" bash "$SCRIPT"` and assert `Wrap-up allowance:` present. Fake binary body:
+```bash
+#!/bin/bash
+if [ "${1:-}" = "--version" ]; then echo "2.1.290 (Claude Code)"; exit 0; fi
+cat "FIXTURE_PATH"
+```
+(write it with the real `$FIX/normal.txt` path substituted).
+
+- [ ] **Step 2: Implement in usage-cache.py** — add a `wrap_up_line(account, util, credits)` section (inside its own try like the others), called last. Text: base sentence exactly as in the test; for Pro append " On Pro it is available once per weekly period."; if the credits line starts with "Usage credits: ON ·" append " With usage credits on, the wrap-up is used first, then credits."
+
+- [ ] **Step 3: Implement in check-usage.sh** — in the live branch only, after the CLI-found check and before `/usage`: `if [ -z "${CHECK_USAGE_CLI_VERSION:-}" ]; then CHECK_USAGE_CLI_VERSION="$("$claude_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"; fi; export CHECK_USAGE_CLI_VERSION`. In canned mode, export it only if already set. Add `CHECK_USAGE_CLI_VERSION` to the header env list.
+
+- [ ] **Step 4: Docs.**
+SKILL.md: add a bullet to "Plan and credits lines": "`Wrap-up allowance: …` (Claude Code 2.1.277+, Pro and Max, shown when the session is at 80% or more) means a response already running when the five-hour limit hits may finish briefly. It never covers starting a new step, counts toward the weekly limit, and on Pro is available once per week. Keep pausing at step boundaries; treat wrap-up as a safety net for a step already underway." Add to the decision rule's Session ≥ 90% bullet: "The wrap-up allowance does not change this: it only lets a response already in progress finish." Add to "Interpreting numbers the user already has": "If the user reports seeing `Usage limit reached · wrapping up`, the five-hour limit has been hit: finish only the current step, commit, and schedule a resume after the session reset."
+README: one sentence under the plan/credits block describing the `Wrap-up allowance:` line and `CHECK_USAGE_CLI_VERSION` in the Testing env list.
+Research doc: add a short "## 6. Wrap-up allowance (added 2026-10-04)" section summarising the Source paragraph above, noting it is not visible in /usage or the cache and the banner strings found in 2.1.289.
+
+- [ ] **Step 5:** `bash tests/test-check-usage.sh` → 0 failed. Run the live script once and record only line prefixes. Commit: "Add wrap-up allowance line and guidance" with the trailer lines.
