@@ -52,11 +52,12 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
   are not included and always run on usage credits.
 - `Binding limit: …` is the limit currently constraining the account. Use it as the headline.
 - `Usage credits: …` says whether work past a plan limit is billed or stops. `ON · … used` means it
-  is billed at API rates. `ON but out of credits` or `OFF` means a hard stop at 100%, whatever the
-  toggle in settings shows.
-- `Cloud session credit: …` or another `… credit: $X of $Y left` line is a separate included credit
-  with its own expiry. It covers only what its label says (for example cloud sessions), not local
-  Claude Code work.
+  is billed at API rates. `ON but out of credits`, or a line starting `Usage credits: OFF`, means a
+  hard stop at 100%, even if the toggle in settings shows on. Promotional credits, if any, are spent
+  before purchased credits.
+- A `… credit: $X of $Y left` line is a separate included credit with its own expiry. It covers only
+  what its label says: a `Claude Code and Cowork credit` line does apply to local Claude Code work; a
+  `Cloud session credit (cloud sessions only)` line does not.
 - `Credits check: …` under a WARNING settles whether the WARNING means a bill or a stop. Relay it.
 
 When these lines are absent, fall back to the WARNING's either/or wording.
@@ -90,7 +91,7 @@ task says nothing about the end of it.
 If the user pastes `/usage` output and asks whether to continue, apply the same rules to the pasted
 figures. Do not re-run the script unless they ask or the pasted output is ambiguous. In particular,
 weekly at 100% with session room is the WARNING case even when no WARNING text was pasted: say that
-requests may still be succeeding on purchased credits, and point to `/usage-credits`.
+requests may still be succeeding on usage credits, if the account has a balance, and point to `/usage-credits`.
 
 If the user says usage credits are switched on but the balance is zero and auto-reload is off, treat
 credits as unavailable: weekly at 100% is then a hard stop at the next request, not a bill. Say so
