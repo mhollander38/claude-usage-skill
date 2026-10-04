@@ -58,13 +58,13 @@ usage credits (real money) — or riding a grace window that ends without warnin
 
 ## Install
 
-Clone the repository anywhere you like, then link the skill folder into your Claude Code
-skills directory:
+Clone or download [the repository](https://github.com/mhollander38/claude-usage-skill)
+anywhere you like. Then, from inside the repository folder, link the skill folder into your
+Claude Code skills directory:
 
 ```bash
-git clone https://github.com/mhollander38/claude-usage-skill.git
 mkdir -p ~/.claude/skills
-ln -s "$(pwd)/claude-usage-skill/skills/check-usage" ~/.claude/skills/check-usage
+ln -s "$(pwd)/skills/check-usage" ~/.claude/skills/check-usage
 ```
 
 If you use `CLAUDE_CONFIG_DIR`, link into `$CLAUDE_CONFIG_DIR/skills` instead. The repo also
