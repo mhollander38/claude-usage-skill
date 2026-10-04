@@ -11,7 +11,12 @@ Environment:
   CHECK_USAGE_NOW_MS         current time in epoch milliseconds (tests); default: now
   CHECK_USAGE_CACHE_MAX_AGE  maximum cache age in seconds; default 180
   CHECK_USAGE_CLI_VERSION    Claude Code version, e.g. 2.1.289; gates the wrap-up allowance line
+  CHECK_USAGE_DEBUG          non-empty: let errors propagate instead of staying silent (tests)
+
+The last line printed (when a credits line exists) is "Credits state: billed|stop|local",
+an internal marker for check-usage.sh that is never shown to the user.
 """
+
 import json
 import os
 import sys
@@ -32,28 +37,35 @@ KNOWN_OFF_REASONS = {
     "seat_tier_level_disabled",
     "overage_not_provisioned",
 }
-LOCAL_CREDIT_NOTE = ("Local included credit available: work past a plan limit may draw on it "
-                     "before stopping.")
+LOCAL_CREDIT_NOTE = (
+    "Local included credit available: work past a plan limit may draw on it before stopping."
+)
 CURRENCY_SYMBOLS = {"GBP": "£", "USD": "$", "EUR": "€"}
 # Dollar-denominated credit buckets. Keys are server-side codenames; never print them.
 CREDIT_LABELS = {
     "iguana_necktie": "Cloud session credit (cloud sessions only)",
     "cinder_cove": "Claude Code and Cowork credit",
 }
+# Buckets known to cover Claude Code work locally. Unknown buckets are listed but never
+# change the credits state.
+LOCAL_CREDIT_KEYS = {"cinder_cove"}
 NOT_CREDIT_BUCKETS = {"five_hour", "seven_day"}
 FUTURE_TOLERANCE_MS = 60_000
 WRAP_UP_MIN_VERSION = (2, 1, 277)
 WRAP_UP_TIERS = {"default_claude_pro", "default_claude_max_5x", "default_claude_max_20x"}
 WRAP_UP_SESSION_PERCENT = 80
-WRAP_UP_BASE = ("Wrap-up allowance: if the 5-hour limit is reached mid-response, Claude Code may "
-                "keep working briefly to a stopping point (\"Usage limit reached · wrapping up\"). "
-                "It counts toward the weekly limit and never covers starting new work.")
+WEEKLY_EXHAUSTED_PERCENT = 100
+WRAP_UP_BASE = (
+    "Wrap-up allowance: if the 5-hour limit is reached mid-response, Claude Code may "
+    'keep working briefly to a stopping point ("Usage limit reached · wrapping up"). '
+    "It counts toward the weekly limit and never covers starting new work."
+)
 
 
 def money(minor, currency, places):
     currency = currency if isinstance(currency, str) else None
     symbol = CURRENCY_SYMBOLS.get(currency or "", (currency + " ") if currency else "")
-    return f"{symbol}{minor / (10 ** places):.{places}f}"
+    return f"{symbol}{minor / (10**places):.{places}f}"
 
 
 def limit_label(entry):
@@ -74,12 +86,16 @@ def short_date(iso):
     try:
         d = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
         return f"{d.strftime('%b')} {d.day}"
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, AttributeError):
         return None
 
 
+def account_tier(account):
+    return account.get("organizationRateLimitTier") or account.get("userRateLimitTier")
+
+
 def plan_line(account):
-    tier = account.get("organizationRateLimitTier") or account.get("userRateLimitTier")
+    tier = account_tier(account)
     if not tier:
         return None
     name = TIERS.get(tier, "unrecognised tier") if isinstance(tier, str) else "unrecognised tier"
@@ -101,6 +117,7 @@ def binding_line(util):
 
 
 def credits_line(util):
+    """Return (line, state) with state "billed" or "stop", or None without extra_usage."""
     extra = util.get("extra_usage")
     if not isinstance(extra, dict):
         return None
@@ -113,24 +130,30 @@ def credits_line(util):
         limit = extra.get("monthly_limit")
         numeric = (int, float)
         if isinstance(used, numeric) and isinstance(limit, numeric) and used >= limit:
-            return (f"Usage credits: ON but monthly spend limit reached "
-                    f"({money(used, currency, places)} of {money(limit, currency, places)}), "
-                    "so work stops when a plan limit is hit")
+            return (
+                f"Usage credits: ON but monthly spend limit reached "
+                f"({money(used, currency, places)} of {money(limit, currency, places)}), "
+                "so work stops when a plan limit is hit",
+                "stop",
+            )
         if isinstance(used, numeric):
             line += f" · {money(used, currency, places)} used"
             if isinstance(limit, numeric):
                 line += f" of {money(limit, currency, places)} monthly limit"
-        return line + " (work past a plan limit is billed at API rates)"
+        return line + " (work past a plan limit is billed at API rates)", "billed"
+    stop = ", so work stops when a plan limit is hit"
+    if extra.get("user_disabled"):
+        return "Usage credits: OFF (turned off in settings)" + stop, "stop"
     reason = extra.get("disabled_reason")
     if reason == "out_of_credits":
-        return (f"Usage credits: ON but out of credits (balance {money(0, currency, places)}), "
-                "so work stops when a plan limit is hit")
-    detail = f" ({reason})" if reason in KNOWN_OFF_REASONS and not extra.get("user_disabled") else ""
-    return f"Usage credits: OFF{detail}, so work stops when a plan limit is hit"
+        balance = f" (balance {money(0, currency, places)})" if isinstance(currency, str) else ""
+        return f"Usage credits: ON but out of credits{balance}" + stop, "stop"
+    detail = f" ({reason})" if reason in KNOWN_OFF_REASONS else ""
+    return f"Usage credits: OFF{detail}" + stop, "stop"
 
 
 def credit_buckets(util):
-    """Yield (label, remaining, line) for each dollar credit bucket."""
+    """Return a list of (key, remaining, line) for each dollar credit bucket."""
     found = []
     for key, bucket in util.items():
         if key in NOT_CREDIT_BUCKETS or not isinstance(bucket, dict):
@@ -149,7 +172,7 @@ def credit_buckets(util):
         expires = short_date(bucket.get("resets_at"))
         if expires:
             line += f" · expires {expires}"
-        found.append((label, remaining, line))
+        found.append((key, remaining, line))
     return found
 
 
@@ -158,8 +181,9 @@ def credit_bucket_lines(util):
 
 
 def local_credit_available(util):
-    return any(remaining > 0 for label, remaining, _ in credit_buckets(util)
-               if label != CREDIT_LABELS["iguana_necktie"])
+    return any(
+        remaining > 0 for key, remaining, _ in credit_buckets(util) if key in LOCAL_CREDIT_KEYS
+    )
 
 
 def parse_version(text):
@@ -169,11 +193,11 @@ def parse_version(text):
     return tuple(int(p) for p in parts)
 
 
-def wrap_up_line(account, util, credits):
+def wrap_up_line(account, util, credits_state):
     version = parse_version(os.environ.get("CHECK_USAGE_CLI_VERSION"))
     if version is None or version < WRAP_UP_MIN_VERSION:
         return None
-    tier = account.get("organizationRateLimitTier") or account.get("userRateLimitTier")
+    tier = account_tier(account)
     if tier not in WRAP_UP_TIERS:
         return None
     limits = util.get("limits")
@@ -183,10 +207,16 @@ def wrap_up_line(account, util, credits):
     pct = session.get("percent") if session else None
     if not isinstance(pct, (int, float)) or pct < WRAP_UP_SESSION_PERCENT:
         return None
+    weekly = next(
+        (e for e in limits if isinstance(e, dict) and e.get("kind") == "weekly_all"), None
+    )
+    week_pct = weekly.get("percent") if weekly else None
+    if isinstance(week_pct, (int, float)) and week_pct >= WEEKLY_EXHAUSTED_PERCENT:
+        return None
     line = WRAP_UP_BASE
     if tier == "default_claude_pro":
-        line += " On Pro it is available once per weekly period."
-    if credits and credits.startswith("Usage credits: ON ·"):
+        line += " On Pro it is available up to once per weekly period."
+    if credits_state == "billed":
         line += " With usage credits on, the wrap-up is used first, then credits."
     return line
 
@@ -212,24 +242,29 @@ def report(cfg, now_ms, max_age_s):
 
     def section(fn, *args):
         try:
-            result = fn(*args)
-        except Exception:
+            return fn(*args)
+        except Exception:  # undocumented input: one bad section must not break the rest
+            if os.environ.get("CHECK_USAGE_DEBUG"):
+                raise
             return None
-        return result
 
     plan = section(plan_line, account)
     binding = section(binding_line, util)
     credits = section(credits_line, util)
+    credits_text, state = credits if credits else (None, None)
     buckets = section(credit_bucket_lines, util) or []
-    for line in (plan, binding, credits):
+    for line in (plan, binding, credits_text):
         if line:
             lines.append(line)
     lines += buckets
-    if credits and "work stops" in credits and section(local_credit_available, util):
+    if state == "stop" and section(local_credit_available, util):
+        state = "local"
         lines.append(LOCAL_CREDIT_NOTE)
-    wrap_up = section(wrap_up_line, account, util, credits)
+    wrap_up = section(wrap_up_line, account, util, state)
     if wrap_up:
         lines.append(wrap_up)
+    if state:
+        lines.append(f"Credits state: {state}")
     return lines
 
 
@@ -244,8 +279,9 @@ def main():
         lines = report(cfg, now_ms, max_age_s)
         if lines:
             print("\n".join(lines))
-    except Exception:  # undocumented input: stay silent rather than break the report
-        return
+    except Exception:  # undocumented input: stay silent, never break the report
+        if os.environ.get("CHECK_USAGE_DEBUG"):
+            raise
 
 
 if __name__ == "__main__":
