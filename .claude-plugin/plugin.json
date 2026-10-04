@@ -22,5 +22,6 @@
   "repository": "https://github.com/mhollander38/claude-usage-skill",
   "documentationUrl": "https://github.com/mhollander38/claude-usage-skill#readme",
   "supportUrl": "https://github.com/mhollander38/claude-usage-skill/issues",
-  "privacyPolicyUrl": "https://github.com/mhollander38/claude-usage-skill/blob/main/PRIVACY.md"
+  "privacyPolicyUrl": "https://github.com/mhollander38/claude-usage-skill/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/mhollander38/claude-usage-skill/blob/main/LICENSE"
 }
