@@ -43,8 +43,9 @@ Usage credits: ON but out of credits (balance £0.00), so work stops when a plan
 Cloud session credit (cloud sessions only): $103.13 of $250.00 left · expires Nov 5
 ```
 
-On Pro and Max with Claude Code 2.1.277 or later, once the session is at 80% or more it also adds a
-`Wrap-up allowance:` line: a response already running when the five-hour limit hits may finish briefly.
+On Pro and Max with Claude Code 2.1.277 or later, once the session is at 80% or more and weekly is
+below 100%, it also adds a `Wrap-up allowance:` line: a response already running when the five-hour
+limit hits may finish briefly (on Pro, up to once per week).
 
 Under a WARNING it also adds a `Credits check:` line saying whether work past 100% is being billed
 or will stop. The cache is undocumented, so these lines may disappear after a Claude Code update;
@@ -81,6 +82,8 @@ Ask Claude Code about usage limits, or invoke it directly:
   report and interpret what it prints.
 - `skills/check-usage/scripts/check-usage.sh` — runs `claude -p "/usage"`, extracts the session and
   week lines, and adds a `NOTICE`/`WARNING` block when the week is nearly or fully exhausted.
+- `skills/check-usage/scripts/usage-cache.py` — optional helper that reads the plan, binding limit,
+  credits and wrap-up lines from Claude Code's local usage cache.
 - `install.sh` — symlinks `skills/check-usage` into `~/.claude/skills/check-usage`.
 - `.claude-plugin/plugin.json` — plugin manifest, so the repo can also be installed as a plugin or
   run under `claude plugin eval`.
@@ -95,6 +98,7 @@ non-zero where the figures are unavailable:
 | `claude` not on PATH | `check-usage: 'claude' not found …` | 127 |
 | `claude -p "/usage"` exits non-zero | `check-usage: 'claude -p /usage' failed (exit N)…` plus its output | 1 |
 | it exits 0 with no output | `check-usage: 'claude -p /usage' returned no output…` | 1 |
+| `CHECK_USAGE_INPUT_FILE` unreadable or not a file | `check-usage: CHECK_USAGE_INPUT_FILE is set but … is not readable.` | 2 |
 | output has no session/week lines (e.g. the per-session cost summary when not signed in to a subscription, or API-key billing) | `check-usage: no session/week lines found…` plus the raw output | 0 |
 
 ## Testing
@@ -112,6 +116,8 @@ for trying the skill's behaviour by hand:
   unless this is set). `CHECK_USAGE_NO_CACHE=1` turns the lines off. `CHECK_USAGE_PYTHON` picks the
   interpreter. `CHECK_USAGE_CLI_VERSION=<x.y.z>` sets the Claude Code version for the wrap-up line
   (live mode detects it from `claude --version`; canned mode uses it only if set).
+- `CHECK_USAGE_CACHE_MAX_AGE=<seconds>` (default 180), `CHECK_USAGE_NOW_MS=<epoch ms>` and
+  `CHECK_USAGE_DEBUG=1` (let the helper raise instead of staying silent) are for tests and tuning.
 
 When `CHECK_USAGE_INPUT_FILE` is set the script prints a `check-usage: reading canned /usage output … (not live)` line first, so canned figures are never mistaken for live ones.
 
@@ -168,11 +174,11 @@ turn it on, buy credits, and set a monthly spend limit or auto-reload via `/usag
 which is interactive-only — it opens `claude.ai/settings/usage` in a browser. On Team/
 Enterprise plans an org admin manages it instead, at `claude.ai/admin-settings/usage`.
 
-As of Claude Code 2.1.269, there's no dedicated flag or JSON field exposing usage-credit
-status — `claude -p "/usage" --output-format json` returns the same plain-text block as
-the interactive command, just wrapped in a JSON envelope. When usage credits are active,
-Claude Code shows extra rows in `/usage` (credit balance, spend, or an "off" hint) alongside
-the session/week percentages, so this skill's script opportunistically greps for
+Usage-credit status is not in the `/usage` text (`claude -p "/usage" --output-format json` returns
+the same plain-text block as the interactive command, wrapped in a JSON envelope), so the script
+reads it best-effort from Claude Code's local cache (the `Usage credits:` line above). When usage
+credits are active, Claude Code may also show extra rows in `/usage` (credit balance, spend, or an
+"off" hint) alongside the session/week percentages, so the script opportunistically greps for
 credit/extra-usage/overage keywords too. Whether those rows appear in the headless `-p`
 render depends on account/plan eligibility, so treat that part as best-effort — the plain-text
 `/usage` output on this repo's own test account never printed a credit line either way, even
@@ -186,4 +192,6 @@ the overflow without the CLI saying so explicitly.
 - A Claude subscription plan (Pro/Max/Team). API-key billing doesn't expose the same
   session/week percentages, in which case the script falls back to printing the raw
   `/usage` output.
-- python3 (optional) for the plan and credits lines.
+- python3 3.7 or later (optional) for the plan and credits lines. The macOS python3 stub (shown
+  when the Command Line Tools are not installed) is detected and skipped.
+- `claude -p "/usage"` has no timeout, so a hung CLI hangs the check.

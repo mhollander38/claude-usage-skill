@@ -8,14 +8,14 @@ description: Check Claude Code's live 5-hour session and weekly usage percentage
 Run the bundled script to get live usage numbers from your Anthropic account:
 
 ```
-bash <this skill's directory>/scripts/check-usage.sh
+bash "<this skill's directory>/scripts/check-usage.sh"
 ```
 
 (Use the base directory shown when this skill was invoked to build the path.)
 
 ## What the script prints
 
-Normal output is two or three lines:
+The figures are two or three lines, possibly followed by plan and credits lines (below):
 
 ```
 Current session: 23% used · resets Oct 3 at 7:19pm (Europe/London)
@@ -62,9 +62,10 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
   `Cloud session credit (cloud sessions only)` line does not.
 - `Local included credit available: …` means a credit that applies to local Claude Code work still has
   a balance, so work may continue on it before a hard stop.
-- `Wrap-up allowance: …` (Claude Code 2.1.277+, Pro and Max, shown when the session is at 80% or more)
-  means a response already running when the five-hour limit hits may finish briefly. It never covers
-  starting a new step, counts toward the weekly limit, and on Pro is available once per week. Keep
+- `Wrap-up allowance: …` (Claude Code 2.1.277+, Pro and Max, shown when the session is at 80% or more
+  and weekly is below 100%) means a response already running when the five-hour limit hits may finish
+  briefly. It never covers starting a new step, counts toward the weekly limit, and on Pro is
+  available up to once per week. Keep
   pausing at step boundaries; treat wrap-up as a safety net for a step already underway.
 - `Credits check: …` under a WARNING says whether the WARNING means a bill, a stop, or an included
   credit covering the gap. Relay it.
@@ -74,7 +75,7 @@ When these lines are absent, fall back to the WARNING's either/or wording.
 ## When the script cannot get numbers
 
 A block starting with a `check-usage:` line is the script explaining a failure. Relay the whole block
-verbatim and do not guess, estimate, or infer usage from token counts or context size. Then tell the user how to get
+verbatim (except `check-usage: reading canned …`, which precedes normal figures; report those as test data) and do not guess, estimate, or infer usage from token counts or context size. Then tell the user how to get
 the figures: run `/usage` in an interactive Claude Code session. If the script says the output was
 the per-session cost summary, the account in this environment is most likely on API-key billing or
 not signed in to a subscription, so there is no session/weekly quota to report. If the block says it is reading canned output (not
@@ -87,6 +88,7 @@ A project's own policy (e.g. CLAUDE.md) overrides this. In its absence:
 - **Session ≥ 90%:** pause at the next step boundary rather than starting a step that may be cut
   off. Schedule a resume a few minutes after the session reset time, not exactly on it.
   The wrap-up allowance does not change this: it only lets a response already in progress finish.
+  If weekly is also at 100%, resume after the weekly reset instead (or decide on usage credits).
 - **Weekly ≥ 100% (WARNING):** flag it first, as above. If credits are unavailable (a `Credits
   check:` stop line, or the user says the balance is zero), say work will stop at the next request.
   Continuing on credits is the user's call, never silent.
