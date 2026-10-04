@@ -52,11 +52,11 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
   are not included and always run on usage credits.
 - `Binding limit: …` names the limit currently constraining the account. Lead with it alongside the two
   headline figures; a WARNING still comes first.
-- `Usage credits: …` says whether work past a plan limit is billed or stops. a `Usage credits: ON` line that says work is billed at API rates means it
-  is billed. `ON but out of credits`, or a line starting `Usage credits: OFF`, means a
-  hard stop at 100%, even if the toggle in settings shows on. `ON but monthly spend limit reached`
-  also means a hard stop. Promotional credits, if any, are spent
-  before purchased credits.
+- `Usage credits: …` says whether work past a plan limit is billed or stops. A `Usage credits: ON`
+  line that says work is billed at API rates means it is billed. `ON but out of credits`, or a line
+  starting `Usage credits: OFF`, means a hard stop at 100%, even if the toggle in settings shows on.
+  `ON but monthly spend limit reached` also means a hard stop. Promotional credits, if any, are
+  spent before purchased credits.
 - A `… credit: $X of $Y left` line is a separate included credit with its own expiry. It covers only
   what its label says: a `Claude Code and Cowork credit` line does apply to local Claude Code work; a
   `Cloud session credit (cloud sessions only)` line does not.
