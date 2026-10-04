@@ -88,8 +88,8 @@ hard stop when the week hits 100%** (cloud session credits only cover cloud sess
 | source | documented? | what it gives | gaps |
 |---|---|---|---|
 | `claude -p "/usage"` text | semi (command documented, format not) | auth-mode line, session, weekly, per-model lines | no credits, no tier, no binding-limit flag; interactive-only credit rows are dropped in headless render |
-| `~/.claude.json` → `cachedUsageUtilization` | **no** (internal cache, refreshed by every `/usage` run; `fetchedAtMs`) | `five_hour`, `seven_day`, `seven_day_opus/sonnet/oauth_apps/cowork`, `limits[]` (kind, percent, severity normal/warning, resets_at, scope, **is_active** = the binding limit), `extra_usage` (is_enabled, disabled_reason, used_credits, monthly_limit, currency), `spend` (balance, cap, auto_reload, can_purchase_credits), cloud credit bucket, `seven_day_breakdown` by product | obfuscated keys for promotional/cloud buckets; shape may change without notice |
-| `~/.claude.json` → `oauthAccount` | no | `organizationRateLimitTier` = `default_claude_max_5x`, `organizationType` = `claude_max`, `hasExtraUsageEnabled`, `billingType` | tier string is an internal id |
+| Claude Code's config file in the home directory → `cachedUsageUtilization` | **no** (internal cache, refreshed by every `/usage` run; `fetchedAtMs`) | `five_hour`, `seven_day`, `seven_day_opus/sonnet/oauth_apps/cowork`, `limits[]` (kind, percent, severity normal/warning, resets_at, scope, **is_active** = the binding limit), `extra_usage` (is_enabled, disabled_reason, used_credits, monthly_limit, currency), `spend` (balance, cap, auto_reload, can_purchase_credits), cloud credit bucket, `seven_day_breakdown` by product | obfuscated keys for promotional/cloud buckets; shape may change without notice |
+| Claude Code's config file in the home directory → `oauthAccount` | no | `organizationRateLimitTier` = `default_claude_max_5x`, `organizationType` = `claude_max`, `hasExtraUsageEnabled`, `billingType` | tier string is an internal id |
 | status line JSON (`rate_limits`) | **yes** | `five_hour`, `seven_day`, gateway `spend_limit` | interactive only; no per-model, no credits |
 | API response headers (`anthropic-ratelimit-unified-*`) | internal | per-request status, overageStatus | not reachable from a skill |
 
@@ -147,5 +147,5 @@ usage cache, so the skill infers eligibility from version, tier and session perc
 - How do usage and length limits work? — https://support.claude.com/en/articles/11647753-how-do-usage-and-length-limits-work
 - Claude Code error reference (usage limits section) — https://code.claude.com/docs/en/errors
 - Claude Code status line (`rate_limits` schema) — https://code.claude.com/docs/en/statusline
-- Local evidence: `claude -p "/usage"` on 2.1.288; `~/.claude.json` keys `cachedUsageUtilization`,
+- Local evidence: `claude -p "/usage"` on 2.1.288; Claude Code's config file in the home directory keys `cachedUsageUtilization`,
   `oauthAccount`, `cachedExtraUsageDisabledReason`; strings in the 2.1.288 binary; claude.ai Settings > Usage.
