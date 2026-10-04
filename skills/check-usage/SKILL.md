@@ -62,6 +62,10 @@ best effort (undocumented, shown only when the cache is fresh) and may be absent
   `Cloud session credit (cloud sessions only)` line does not.
 - `Local included credit available: …` means a credit that applies to local Claude Code work still has
   a balance, so work may continue on it before a hard stop.
+- `Wrap-up allowance: …` (Claude Code 2.1.277+, Pro and Max, shown when the session is at 80% or more)
+  means a response already running when the five-hour limit hits may finish briefly. It never covers
+  starting a new step, counts toward the weekly limit, and on Pro is available once per week. Keep
+  pausing at step boundaries; treat wrap-up as a safety net for a step already underway.
 - `Credits check: …` under a WARNING says whether the WARNING means a bill, a stop, or an included
   credit covering the gap. Relay it.
 
@@ -82,6 +86,7 @@ A project's own policy (e.g. CLAUDE.md) overrides this. In its absence:
 
 - **Session ≥ 90%:** pause at the next step boundary rather than starting a step that may be cut
   off. Schedule a resume a few minutes after the session reset time, not exactly on it.
+  The wrap-up allowance does not change this: it only lets a response already in progress finish.
 - **Weekly ≥ 100% (WARNING):** flag it first, as above. If credits are unavailable (a `Credits
   check:` stop line, or the user says the balance is zero), say work will stop at the next request.
   Continuing on credits is the user's call, never silent.
@@ -97,6 +102,9 @@ If the user pastes `/usage` output and asks whether to continue, apply the same 
 figures. Do not re-run the script unless they ask or the pasted output is ambiguous. In particular,
 weekly at 100% with session room is the WARNING case even when no WARNING text was pasted: say that
 requests may still be succeeding on usage credits, if the account has a balance, and point to `/usage-credits`.
+
+If the user reports seeing `Usage limit reached · wrapping up`, the five-hour limit has been hit:
+finish only the current step, commit, and schedule a resume after the session reset.
 
 If the user says usage credits are switched on but the balance is zero and auto-reload is off, treat
 credits as unavailable: weekly at 100% is then a hard stop at the next request, not a bill. Say so

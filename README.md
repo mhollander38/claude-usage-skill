@@ -43,6 +43,9 @@ Usage credits: ON but out of credits (balance £0.00), so work stops when a plan
 Cloud session credit (cloud sessions only): $103.13 of $250.00 left · expires Nov 5
 ```
 
+On Pro and Max with Claude Code 2.1.277 or later, once the session is at 80% or more it also adds a
+`Wrap-up allowance:` line: a response already running when the five-hour limit hits may finish briefly.
+
 Under a WARNING it also adds a `Credits check:` line saying whether work past 100% is being billed
 or will stop. The cache is undocumented, so these lines may disappear after a Claude Code update;
 the figures above them never depend on it. See `docs/research/2026-10-03-plan-limits-and-credits.md`
@@ -107,7 +110,8 @@ for trying the skill's behaviour by hand:
 - `CHECK_USAGE_CLAUDE_BIN=<path>` calls a different `claude` binary.
 - `CHECK_USAGE_CACHE_FILE=<path>` reads plan/credits from this config JSON (canned mode reads none
   unless this is set). `CHECK_USAGE_NO_CACHE=1` turns the lines off. `CHECK_USAGE_PYTHON` picks the
-  interpreter.
+  interpreter. `CHECK_USAGE_CLI_VERSION=<x.y.z>` sets the Claude Code version for the wrap-up line
+  (live mode detects it from `claude --version`; canned mode uses it only if set).
 
 When `CHECK_USAGE_INPUT_FILE` is set the script prints a `check-usage: reading canned /usage output … (not live)` line first, so canned figures are never mistaken for live ones.
 

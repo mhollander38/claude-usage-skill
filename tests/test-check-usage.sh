@@ -46,7 +46,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 printf '#!/bin/bash\necho SENTINEL-CALLED; exit 99\n' > "$TMP/sentinel"
 chmod +x "$TMP/sentinel"
-unset CHECK_USAGE_CACHE_FILE CHECK_USAGE_NO_CACHE CHECK_USAGE_PYTHON CHECK_USAGE_CACHE_MAX_AGE CHECK_USAGE_NOW_MS CHECK_USAGE_INPUT_FILE CHECK_USAGE_CLAUDE_BIN
+unset CHECK_USAGE_CACHE_FILE CHECK_USAGE_NO_CACHE CHECK_USAGE_PYTHON CHECK_USAGE_CACHE_MAX_AGE CHECK_USAGE_NOW_MS CHECK_USAGE_INPUT_FILE CHECK_USAGE_CLAUDE_BIN CHECK_USAGE_CLI_VERSION
 
 # --- A4: canned input ---------------------------------------------------------
 
@@ -208,6 +208,27 @@ if command -v python3 >/dev/null 2>&1; then
   run_cache_py "$TMP/does-not-exist.json"
   assert_eq "cache missing: exit 0" 0 "$rc"
   assert_eq "cache missing: no output" "" "$out"
+
+  WRAP='Wrap-up allowance: if the 5-hour limit is reached mid-response, Claude Code may keep working briefly to a stopping point ("Usage limit reached · wrapping up"). It counts toward the weekly limit and never covers starting new work.'
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.289 python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_contains "wrap-up max: line" "$out" "$WRAP"
+  assert_not_contains "wrap-up max: no pro note" "$out" "once per weekly period"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.276 python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up old version: no line" "$out" "Wrap-up allowance"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up no version: no line" "$out" "Wrap-up allowance"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=garbage python3 "$CACHE_PY" "$FIX/cache-max5x.json" 2>&1)"
+  assert_not_contains "wrap-up bad version: no line" "$out" "Wrap-up allowance"
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.289 python3 "$CACHE_PY" "$FIX/cache-pro-near-session.json" 2>&1)"
+  assert_contains "wrap-up pro: once per week" "$out" "On Pro it is available once per weekly period."
+  assert_contains "wrap-up pro: credits after" "$out" "With usage credits on, the wrap-up is used first, then credits."
+
+  out="$(CHECK_USAGE_NOW_MS="$NOW_MS" CHECK_USAGE_CLI_VERSION=2.1.289 python3 "$CACHE_PY" "$FIX/cache-max5x-low-session.json" 2>&1)"
+  assert_not_contains "wrap-up low session: no line" "$out" "Wrap-up allowance"
 else
   echo "SKIP: python3 not found; enrichment helper tests skipped"
 fi
@@ -261,6 +282,14 @@ if command -v python3 >/dev/null 2>&1; then
   out="$(env -u CLAUDE_CONFIG_DIR HOME="$TMP/home" CHECK_USAGE_INPUT_FILE="$FIX/normal.txt" \
     CHECK_USAGE_CLAUDE_BIN="$TMP/sentinel" CHECK_USAGE_NOW_MS="$NOW_MS" bash "$SCRIPT" 2>&1)"
   assert_not_contains "canned mode ignores HOME cache" "$out" "Plan:"
+
+  run_with_cache "$FIX/normal.txt" "$FIX/cache-max5x.json" CHECK_USAGE_CLI_VERSION=2.1.289
+  assert_contains "wired wrap-up: line" "$out" "Wrap-up allowance:"
+
+  printf '#!/bin/bash\nif [ "${1:-}" = "--version" ]; then echo "2.1.290 (Claude Code)"; exit 0; fi\ncat "%s"\n' "$FIX/normal.txt" > "$TMP/fakeclaude-ver"
+  chmod +x "$TMP/fakeclaude-ver"
+  out="$(env -u CHECK_USAGE_INPUT_FILE CHECK_USAGE_CLAUDE_BIN="$TMP/fakeclaude-ver" CHECK_USAGE_CACHE_FILE="$FIX/cache-max5x.json" CHECK_USAGE_NOW_MS="$NOW_MS" bash "$SCRIPT" 2>&1)"
+  assert_contains "live wrap-up: version detected" "$out" "Wrap-up allowance:"
 fi
 
 # --- Plan shapes --------------------------------------------------------------

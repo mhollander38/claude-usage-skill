@@ -7,6 +7,8 @@
 #   CHECK_USAGE_CACHE_FILE  Claude Code config JSON to read plan/credits from (default in live mode:
 #                           ${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json; canned mode reads none unless set)
 #   CHECK_USAGE_NO_CACHE    set to anything non-empty to skip the plan/credits lines
+#   CHECK_USAGE_CLI_VERSION Claude Code version (e.g. 2.1.289) for the wrap-up allowance line (live mode:
+#                           detected from `claude --version` unless set; canned mode: only if set)
 #   CHECK_USAGE_PYTHON      python interpreter for the plan/credits lines (default: python3; optional)
 #
 # Exit codes: 0 ok (or no structured lines found); 1 claude failed or returned nothing;
@@ -30,6 +32,10 @@ else
     echo "check-usage: 'claude' not found (looked for '$claude_bin'). Usage figures are unavailable."
     exit 127
   fi
+  if [ -z "${CHECK_USAGE_CLI_VERSION:-}" ]; then
+    CHECK_USAGE_CLI_VERSION="$("$claude_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+  fi
+  export CHECK_USAGE_CLI_VERSION
   output="$("$claude_bin" -p "/usage" 2>&1)"
   status=$?
 fi

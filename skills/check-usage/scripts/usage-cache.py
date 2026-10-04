@@ -10,6 +10,7 @@ undocumented, so this must never fail loudly.
 Environment:
   CHECK_USAGE_NOW_MS         current time in epoch milliseconds (tests); default: now
   CHECK_USAGE_CACHE_MAX_AGE  maximum cache age in seconds; default 180
+  CHECK_USAGE_CLI_VERSION    Claude Code version, e.g. 2.1.289; gates the wrap-up allowance line
 """
 import json
 import os
@@ -41,6 +42,12 @@ CREDIT_LABELS = {
 }
 NOT_CREDIT_BUCKETS = {"five_hour", "seven_day"}
 FUTURE_TOLERANCE_MS = 60_000
+WRAP_UP_MIN_VERSION = (2, 1, 277)
+WRAP_UP_TIERS = {"default_claude_pro", "default_claude_max_5x", "default_claude_max_20x"}
+WRAP_UP_SESSION_PERCENT = 80
+WRAP_UP_BASE = ("Wrap-up allowance: if the 5-hour limit is reached mid-response, Claude Code may "
+                "keep working briefly to a stopping point (\"Usage limit reached · wrapping up\"). "
+                "It counts toward the weekly limit and never covers starting new work.")
 
 
 def money(minor, currency, places):
@@ -155,6 +162,35 @@ def local_credit_available(util):
                if label != CREDIT_LABELS["iguana_necktie"])
 
 
+def parse_version(text):
+    parts = str(text or "").strip().split(".")
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        return None
+    return tuple(int(p) for p in parts)
+
+
+def wrap_up_line(account, util, credits):
+    version = parse_version(os.environ.get("CHECK_USAGE_CLI_VERSION"))
+    if version is None or version < WRAP_UP_MIN_VERSION:
+        return None
+    tier = account.get("organizationRateLimitTier") or account.get("userRateLimitTier")
+    if tier not in WRAP_UP_TIERS:
+        return None
+    limits = util.get("limits")
+    if not isinstance(limits, list):
+        return None
+    session = next((e for e in limits if isinstance(e, dict) and e.get("kind") == "session"), None)
+    pct = session.get("percent") if session else None
+    if not isinstance(pct, (int, float)) or pct < WRAP_UP_SESSION_PERCENT:
+        return None
+    line = WRAP_UP_BASE
+    if tier == "default_claude_pro":
+        line += " On Pro it is available once per weekly period."
+    if credits and credits.startswith("Usage credits: ON ·"):
+        line += " With usage credits on, the wrap-up is used first, then credits."
+    return line
+
+
 def report(cfg, now_ms, max_age_s):
     if not isinstance(cfg, dict):
         return []
@@ -191,6 +227,9 @@ def report(cfg, now_ms, max_age_s):
     lines += buckets
     if credits and "work stops" in credits and section(local_credit_available, util):
         lines.append(LOCAL_CREDIT_NOTE)
+    wrap_up = section(wrap_up_line, account, util, credits)
+    if wrap_up:
+        lines.append(wrap_up)
     return lines
 
 

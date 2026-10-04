@@ -124,6 +124,20 @@ Known unknowns: whether `is_active` means "most constraining" or "currently enfo
 true on the highest-percentage limit); whether promotional credits ever appear as a separate bucket
 in the cache (none on this account to observe); Team/Enterprise `/usage` text shapes.
 
+## 6. Wrap-up allowance (added 2026-10-04)
+
+Source: https://support.claude.com/en/articles/17040437-claude-code-wrap-up-allowance. If Claude Code
+hits the five-hour limit partway through a response, it may keep working briefly to reach a stopping
+point. Available on Pro, Max and Team premium seats, Claude Code 2.1.277 or later; not for API key or
+third-party cloud use. Pro: up to once per weekly period. Max and Team premium: each time a five-hour
+limit is reached, within the weekly limit. It applies only to a response already in progress; new
+messages after the limit do not get it. It counts toward the weekly limit. With usage credits on, the
+allowance is used first, then credits.
+
+Banners found in 2.1.289: "Usage limit reached · wrapping up" and, with credits on, "Usage limit
+reached · brief included wrap-up, then usage credits". The allowance is not shown in `/usage` or in the
+usage cache, so the skill infers eligibility from version, tier and session percent (80% or more).
+
 ## Sources
 
 - Claude Fable models on your plan — https://support.claude.com/en/articles/15424964-claude-fable-models-on-your-plan
