@@ -190,6 +190,18 @@ while its weekly quota sat at 100% and requests kept succeeding (see the `WARNIN
 which is itself indirect evidence that *something* — credits or a grace window — was covering
 the overflow without the CLI saying so explicitly.
 
+## Releasing
+
+The directory tracks `main` and scans every commit, but installed copies only update when the
+`version` in `.claude-plugin/plugin.json` changes. For each user-facing release:
+
+1. Bump `version` (semver: patch for fixes, minor for new output or behaviour, major for breaking
+   changes to output an agent relies on).
+2. Add a `CHANGELOG.md` entry.
+3. Run `bash tests/test-check-usage.sh`, then push to `main`.
+
+Docs-only or test-only commits don't need a bump.
+
 ## Requirements
 
 - Claude Code CLI installed and authenticated (`claude` on your `PATH`).
