@@ -1,10 +1,26 @@
 {
   "name": "claude-usage-skill",
-  "description": "Reports live Claude Code session and weekly usage against subscription limits, with reset times, so long-running sessions can pace themselves.",
+  "displayName": "Check Usage",
+  "description": "Shows your live Claude Code session and weekly limits, with reset times, plan, usage credits and the binding limit, so long tasks can pace themselves. Requires Claude Code.",
   "version": "0.3.0",
   "author": {
     "name": "mhollander38",
     "url": "https://github.com/mhollander38/claude-usage-skill"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "usage",
+    "limits",
+    "quota",
+    "rate limit",
+    "credits",
+    "billing",
+    "session",
+    "weekly"
+  ],
+  "homepage": "https://github.com/mhollander38/claude-usage-skill",
+  "repository": "https://github.com/mhollander38/claude-usage-skill",
+  "documentationUrl": "https://github.com/mhollander38/claude-usage-skill#readme",
+  "supportUrl": "https://github.com/mhollander38/claude-usage-skill/issues",
+  "privacyPolicyUrl": "https://github.com/mhollander38/claude-usage-skill/blob/main/PRIVACY.md"
 }
