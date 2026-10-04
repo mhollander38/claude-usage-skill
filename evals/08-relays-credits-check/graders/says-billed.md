@@ -4,4 +4,4 @@ target: last_message
 match: contains
 flags: i
 ---
-(billed|charged|paying|cost(s)? (you )?(real )?money|draw(s|ing)? (on|from|down) (your )?(usage )?credits)
+(being billed|billed at (standard )?API rates|charged at (standard )?API rates|billed to your usage credits)
