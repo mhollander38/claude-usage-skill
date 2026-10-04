@@ -207,5 +207,8 @@ SKILL.md's reporting rules, with fixtures for each plan's `/usage` shape.
 - ANSI escape codes around a `Current ...` line would drop that line silently. Strip escapes before matching if this is ever observed in `-p` output.
 - README "Use" section only covers the symlink install (`/check-usage`); as a plugin the skill is `claude-usage-skill:check-usage`.
 - No eval checks that an agent relays the script's own `Credits check:` line (only the pasted-figures rule is covered by case 07).
+  **Status (2026-10-04):** resolved in `d28f97c` — eval case 08 runs `tests/demo/credits-billed.sh` and checks the reply relays the Credits check line (not-hard-stop grader needs narrowing, see pilot).
 - The `Wrap-up allowance:` line appears whenever the session is at 80% or more, even when the weekly limit is already at 100%. On Max the allowance applies only within the weekly limit, so suppress the line when weekly is at 100%.
+  **Status (2026-10-04):** resolved in `82ab9e1` (docs in `2d2cfe0`) — wrap-up line is suppressed when weekly is at 100%.
 - The Pro wrap-up wording says "is available once per weekly period"; the cache cannot tell whether it was already used, so "up to once" is more accurate. Team premium seats are eligible but not identifiable from the cache, so they get no line.
+  **Status (2026-10-04):** resolved in `82ab9e1` (docs in `2d2cfe0`) — wording is now "up to once".
