@@ -4,6 +4,16 @@ All notable changes to this plugin. Versions follow [Semantic Versioning](https:
 The directory publishes from `main`; installed copies update only when `version` in
 `.claude-plugin/plugin.json` changes, so every user-facing release bumps it and adds an entry here.
 
+## [0.3.1] — unreleased
+
+### Added
+- Chat and Cowork behaviour: when live usage isn't available (no Claude Code CLI), the skill asks
+  for the Settings → Usage figures or a screenshot and interprets them, instead of suggesting
+  `/usage`, and does not run at task kickoff or step boundaries there.
+
+### Changed
+- Listing description mentions what the skill does outside Claude Code.
+
 ## [0.3.0] — 2026-10-04
 
 First directory release.

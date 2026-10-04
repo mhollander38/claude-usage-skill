@@ -1,8 +1,8 @@
 {
   "name": "claude-usage-skill",
   "displayName": "Check Usage",
-  "description": "Shows your live Claude Code session and weekly limits, with reset times, plan, usage credits and the binding limit, so long tasks can pace themselves. Requires Claude Code.",
-  "version": "0.3.0",
+  "description": "Shows your Claude session and weekly limits, with reset times, plan, usage credits and the binding limit, so long tasks can pace themselves. Live figures in Claude Code; in chat and Cowork it interprets your Usage page.",
+  "version": "0.3.1",
   "author": {
     "name": "mhollander38",
     "url": "https://github.com/mhollander38/claude-usage-skill"

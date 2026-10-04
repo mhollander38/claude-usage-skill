@@ -205,6 +205,8 @@ Docs-only or test-only commits don't need a bump.
 ## Requirements
 
 - Claude Code CLI installed and authenticated (`claude` on your `PATH`).
+  In claude.ai chat and Cowork the skill cannot read live usage; it asks you to paste or
+  screenshot Settings → Usage and interprets that instead.
 - A Claude subscription plan (Pro/Max/Team). API-key billing doesn't expose the same
   session/week percentages, in which case the script falls back to printing the raw
   `/usage` output.

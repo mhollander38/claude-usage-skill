@@ -81,6 +81,22 @@ the per-session cost summary, the account in this environment is most likely on 
 not signed in to a subscription, so there is no session/weekly quota to report. If the block says it is reading canned output (not
 live), say so: the figures are test data, not the account's usage.
 
+## Outside Claude Code (chat, Cowork)
+
+The script needs the Claude Code CLI on the user's machine. In claude.ai chat (web, desktop,
+mobile) and in Cowork it cannot read live usage and exits with "check-usage: 'claude' not found".
+When that happens:
+
+- Say live figures aren't available here and ask the user to open Settings → Usage (in the
+  Claude app or claude.ai) and paste the figures or share a screenshot. Do not suggest `/usage`;
+  it exists only in Claude Code.
+- Interpret what they share with the rules above: the session and weekly (all models) limits
+  apply to every model; a per-model line such as "Fable only" is a sub-cap, not spare capacity;
+  usage credits switched on with a zero balance mean a hard stop; usage here and in Claude Code
+  counts toward the same limits.
+- Only engage when the user asks about usage or shares figures. Do not run the check at task
+  kickoff or step boundaries on these surfaces — it cannot succeed and would interrupt the work.
+
 ## Recommended decision rule for unattended, multi-step work
 
 A project's own policy (e.g. CLAUDE.md) overrides this. In its absence:
